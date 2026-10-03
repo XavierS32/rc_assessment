@@ -8,5 +8,7 @@
 			"path": "mearm"
 		}
 	],
-	"settings": {}
+	"settings": {
+		"editor.tabSize": 2
+	}
 }
