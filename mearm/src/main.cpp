@@ -1,6 +1,6 @@
 #include <Arduino.h>
 #include <Servo.h>
-#include "servo_helper.h"
+#include "servo_helper/servo_helper.h"
 
 Servo bottom;
 Servo left;
