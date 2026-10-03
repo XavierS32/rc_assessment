@@ -26,11 +26,11 @@ public:
   }
   // 获取已读取字符串的长度
   size_t getLength(void) {
-    return this->length;
+    return length;
   }
   // IMPORTANT: 清除该轮输入（必须在重新输入前使用）
   void resetInput(void) {
-    this->length = 0;
+    length = 0;
   }
   private:
   Stream &stream;
