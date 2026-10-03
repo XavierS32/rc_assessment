@@ -1,6 +1,6 @@
 #include <Arduino.h>
 #include <Servo.h>
-#include <servo_helper.h>
+#include "servo_helper.h"
 
 Servo bottom;
 Servo left;
@@ -14,7 +14,7 @@ servo_helper::Actuator actuators[] = {
   {gripper, "gripper"}
 };
 
-auto state = servo_helper::make_state(actuators);
+auto state = servo_helper::make_state(actuators, Serial);
 
 void setup() {
   Serial.begin(9600);
@@ -24,6 +24,8 @@ void setup() {
   gripper.attach(6);
 
   gripper.write(0);
+
+  while(!Serial);
 
   servo_helper::setup(state);
 }

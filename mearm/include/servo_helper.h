@@ -7,7 +7,7 @@
 //   ...
 // };
 //
-// auto state = servo_helper::make_state(actuators);
+// auto state = servo_helper::make_state(actuators, Serial);
 //
 // void setup() {
 //   // ...
@@ -34,39 +34,40 @@ namespace servo_helper {
     Actuator (&actuators)[N];
     size_t index;
     int step;
+    Stream &stream;
   };
 
   template <size_t N>
-  State<N> make_state(Actuator (&actuators)[N]) {
-    return State<N>{actuators, 0, 1};
+  State<N> make_state(Actuator (&actuators)[N], Stream &stream) {
+    return State<N>{actuators, 0, 1, stream};
   }
 
   // Helper function
   template <typename T_array, typename T_print>
-  void print_table_row(T_array &array, size_t N, size_t highlight, T_print doPrint) {
+  void print_table_row(Stream &stream, T_array &array, size_t N, size_t highlight, T_print doPrint) {
       // FIXME: 可能有表格对齐问题，Serial.print会返回字节数，所以理论上可以手动计算空格，但是这样徒增复杂度，而且对于非ascii字符及不可见/空白ascii字符可能有各种奇怪效果
       for (size_t i = 0; i < N; ++i) {
           if (i == highlight) {
-              Serial.print("\x1b[7m");
-              doPrint(array[i]);
-              Serial.print("\t\x1b[0m"); // whitespace characters无法显示出颜色，所以无法高亮一整个单元格
+              stream.print("\x1b[7m");
+              doPrint(stream, array[i]);
+              stream.print("\t\x1b[0m"); // whitespace characters无法显示出颜色，所以无法高亮一整个单元格
           }
           else {
-              doPrint(array[i]);
-              Serial.print('\t');
+              doPrint(stream, array[i]);
+              stream.print('\t');
           }
       }
   }
 
   template <size_t N>
   void print_table(State<N> &state) {
-    print_table_row(state.actuators, N, state.index, [](Actuator &a){ Serial.print(a.name); });
-    Serial.print("\tstep");
-    Serial.println();
-    print_table_row(state.actuators, N, state.index, [](Actuator &a){ Serial.print(a.servo.read(), DEC); });
-    Serial.print("\t");
-    Serial.print(state.step, DEC);
-    Serial.println();
+    print_table_row(state.stream, state.actuators, N, state.index, [](Stream &stream, Actuator &a){ stream.print(a.name); });
+    state.stream.print("\tstep");
+    state.stream.println();
+    print_table_row(state.stream, state.actuators, N, state.index, [](Stream &stream, Actuator &a){ stream.print(a.servo.read(), DEC); });
+    state.stream.print("\t");
+    state.stream.print(state.step, DEC);
+    state.stream.println();
   }
   // Helper function END
 
@@ -77,9 +78,9 @@ namespace servo_helper {
 
   template <size_t N>
   void loop(State<N> &state) {
-    if (Serial.available() > 0) {
+    if (state.stream.available() > 0) {
       // do operation
-      int operate = Serial.read();
+      int operate = state.stream.read();
       switch (operate) {
         // +(=)/-(_)：转动电机
         case '+':
