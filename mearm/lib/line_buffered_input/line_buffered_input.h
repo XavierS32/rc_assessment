@@ -1,6 +1,4 @@
 #pragma once
-#include <Arduino.h>
-
 // Stream.readStringUntil无法做到非阻塞的读取一整行，并在未达到一整行时暂时跳过
 // Usage:
 // LineBufferedInput input{Serial};
@@ -13,6 +11,8 @@
 //         // ...
 //     }
 // }
+#include <Arduino.h>
+
 class LineBufferedInput {
 public:
   // 绑定一个Stream
