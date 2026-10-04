@@ -1,8 +1,9 @@
 #include <Arduino.h>
 #include <Servo.h>
 #include <stdio.h>
-#include <line_buffered_input.h>
 #include <limits.h>
+#include <line_buffered_input.h>
+#include "task1.h"
 
 namespace task1 {
   LineBufferedInput input{Serial, Serial};
