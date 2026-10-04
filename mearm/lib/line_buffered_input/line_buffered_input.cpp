@@ -28,7 +28,7 @@ char* LineBufferedInput::getUntil(char *str, size_t size, char terminator) {
           str[length] = ch;
           length++;
     
-          if (ch == terminator) {
+          if (ch == terminator || length == size - 1) {
             str[length] = '\0';
             return str;
           }

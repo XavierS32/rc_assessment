@@ -15,12 +15,13 @@
 
 class LineBufferedInput {
 public:
-  // 绑定一个Stream
-  LineBufferedInput(Stream &stream) : stream(stream) {}
+  // 绑定输入Stream，可选回显Strean
+  LineBufferedInput(Stream &input) : input(input), output(nullptr) {}
+  LineBufferedInput(Stream &input, Stream &output) : input(input), output(&output) {}
   // 在读取的过程中，必须保证str[0:length]不变，size>=length，除此之外，可以自由修改str和size（如realloc）
-  // 非阻塞的读取一个字符串直到terminator字符出现或者buf长度达到size，如果没有达到前述条件，返回NULL，否则返回buf
+  // 非阻塞的读取一个字符串直到terminator字符出现或者buf长度达到size，如果没有达到前述条件，返回nullptr，否则返回buf
   char* getUntil(char *str, size_t size, char terminator);
-  // 非阻塞的读取一个一整行字符串或者buf长度达到size，如果没有达到前述条件，返回NULL，否则返回buf
+  // 非阻塞的读取一个一整行字符串或者buf长度达到size，如果没有达到前述条件，返回nullptr，否则返回buf
   char* getLine(char *str, size_t size) {
     return getUntil(str, size, '\n');
   }
