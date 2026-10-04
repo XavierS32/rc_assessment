@@ -77,7 +77,7 @@ namespace servo_helper {
   }
 
   template <size_t N>
-  void loop(State<N> &state) {
+  bool loop(State<N> &state) {
     if (state.stream.available() > 0) {
       // do operation
       int operate = state.stream.read();
@@ -119,9 +119,15 @@ namespace servo_helper {
         case 'm':
           state.step = max(state.step - 5, 1);
           break;
+        // q/Q：退出
+        case 'q':
+        case 'Q':
+          return true;
+          break;
       }
       // print status
       print_table(state);
     }
+    return false;
   }
 }
