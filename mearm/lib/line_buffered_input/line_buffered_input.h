@@ -5,7 +5,7 @@
 
 // void loop() {
 // #define BUF_SIZE 32
-//     char buf[BUF_SIZE];
+//     static char buf[BUF_SIZE];
 //     if (input.getLine(buf, BUF_SIZE) != nullptr) {
 //         input.resetInput();
 //         // ...
