@@ -42,8 +42,7 @@ PrefixRule<ProgramFuncs> rules[] = {
     [](char const*const str) {
       task1::setup(bottom, left, right, gripper); },
     [](char const*const str) {
-      task1::loop(bottom, left, right, gripper);
-      return false; }}}
+      return task1::loop(bottom, left, right, gripper); }}}
 };
 
 auto prefixMatcher = makePrefixMatcher(rules, ProgramFuncs {

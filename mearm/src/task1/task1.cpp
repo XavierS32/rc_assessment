@@ -64,7 +64,7 @@ namespace task1 {
     lastMillis = millis();
   }
 
-  void loop(Servo &bottom, Servo &left, Servo &right, Servo &gripper) {
+  bool loop(Servo &bottom, Servo &left, Servo &right, Servo &gripper) {
     static enum class Mode { Char, Line } mode = Mode::Char;
     constexpr size_t BUF_SIZE = 32;
     static char buf[BUF_SIZE];
@@ -99,6 +99,11 @@ namespace task1 {
           Serial.print(speed, DEC);
           Serial.println();
           break;
+        case 'q':
+        case 'Q':
+          Serial.read();
+          return true;
+          break;
         case 'x':
           mode = Mode::Line;
           Serial.print("> ");
@@ -125,5 +130,6 @@ namespace task1 {
     }
 
     moveArmOnce(bottom, left, right, gripper);
+    return false;
   }
 }
