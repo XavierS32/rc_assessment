@@ -46,7 +46,7 @@ PrefixRule<ProgramFuncs> rules[] = {
 };
 
 auto prefixMatcher = makePrefixMatcher(rules, ProgramFuncs {
-  [](char const*const str) { Serial.println("in func fallback"); },
+  [](char const*const str) { Serial.println("program not found"); },
   [](char const*const str) { return true; }
 });
 
