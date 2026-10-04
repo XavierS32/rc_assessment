@@ -20,7 +20,7 @@ char* LineBufferedInput::getUntil(char *str, size_t size, char terminator) {
           length--;
         }
       }
-      else if ( 0x20 <= ch && ch <= 0x7E ) { // 只处理可打印字符
+      else if ( (0x20 <= ch && ch <= 0x7E) || ch == 0x0A || ch == 0x0D ) { // 只处理可打印字符，及CR和LF
         if (length >= size - 1) {
           str[size - 1] = '\0';
           length = size - 1;
