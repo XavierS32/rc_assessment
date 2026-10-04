@@ -37,8 +37,7 @@ PrefixRule<ProgramFuncs> rules[] = {
     [](char const*const str) {
       servo_helper::setup(state); },
     [](char const*const str) {
-      servo_helper::loop(state);
-      return false; }}},
+      return servo_helper::loop(state);}}},
   {"task1.2", ProgramFuncs {
     [](char const*const str) {
       task1::setup(bottom, left, right, gripper); },
