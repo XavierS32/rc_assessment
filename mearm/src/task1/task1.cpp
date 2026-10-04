@@ -67,7 +67,7 @@ namespace task1 {
   void loop(Servo &bottom, Servo &left, Servo &right, Servo &gripper) {
     static enum class Mode { Char, Line } mode = Mode::Char;
     constexpr size_t BUF_SIZE = 32;
-    char buf[BUF_SIZE];
+    static char buf[BUF_SIZE];
     if ( mode == Mode::Char && Serial.available() > 0) {
       char ch = Serial.peek();
       switch (ch) {
