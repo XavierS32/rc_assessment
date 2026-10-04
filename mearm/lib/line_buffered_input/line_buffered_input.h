@@ -34,6 +34,7 @@ public:
     length = 0;
   }
   private:
-  Stream &stream;
+  Stream &input;
+  Stream * const output; // Stream* | nullptr
   size_t length = 0;
 };
