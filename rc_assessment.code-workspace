@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"name": "mearm",
+			"path": "mearm"
+		}
+	],
+	"settings": {
+		"editor.tabSize": 2
+	}
+}
