@@ -6,6 +6,10 @@
 		{
 			"name": "mearm",
 			"path": "mearm"
+		},
+		{
+			"name": "arduino",
+			"path": "arduino"
 		}
 	],
 	"settings": {
