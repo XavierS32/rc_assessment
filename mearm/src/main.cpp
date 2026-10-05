@@ -32,18 +32,36 @@ struct ProgramFuncs {
   ProgramLoop loop;
 };
 
+void listProgram();
+
 PrefixRule<ProgramFuncs> rules[] = {
+  {"list", ProgramFuncs {
+    [](char const*const str) {},
+    [](char const*const str) {
+      listProgram();
+      return true; }}},
   {"task1.1", ProgramFuncs {
     [](char const*const str) {
       servo_helper::setup(state); },
     [](char const*const str) {
-      return servo_helper::loop(state);}}},
+      return servo_helper::loop(state); }}},
   {"task1.2", ProgramFuncs {
     [](char const*const str) {
       task1::setup(bottom, left, right, gripper); },
     [](char const*const str) {
-      return task1::loop(bottom, left, right, gripper); }}}
+      return task1::loop(bottom, left, right, gripper); }}},
+   {"task3", ProgramFuncs {
+    [](char const*const str) {
+      task3::setup(); },
+    [](char const*const str) {
+      return task3::loop(); }}}
 };
+
+void listProgram() {
+  for (const auto &i : rules) {
+    Serial.println(i.prefix);
+  }
+}
 
 auto prefixMatcher = makePrefixMatcher(rules, ProgramFuncs {
   [](char const*const str) { Serial.println("program not found"); },
