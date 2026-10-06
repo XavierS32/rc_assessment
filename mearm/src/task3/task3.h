@@ -60,6 +60,20 @@ namespace task3 {
     }
   };
 
+  class RestoreSM {
+  public:
+    enum class State { start, restore, waitForReach } state = State::start;
+    enum class Rt_t { FSM_RT_T_VALUES };
+
+    unsigned long lastTime;
+
+    Rt_t run(ButtonState &clickedButton);
+
+    private:
+      void reset_fsm() {
+        state = State::start;
+      }
+  };
 
   class Task3SM {
   public:
@@ -67,6 +81,7 @@ namespace task3 {
     enum class Rt_t { FSM_RT_T_VALUES };
 
     LoopMovingSM loopMovingSM;
+    RestoreSM restoreSM;
 
     Rt_t run(ButtonState &clickedButton);
 

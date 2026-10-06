@@ -4,20 +4,23 @@
 #include "task3.h"
 
 namespace task3 {
-  void setServo(int const (&angles)[4], unsigned long &lastTime) {
-    bottom.write(angles[0]);
-    left.write(angles[1]);
-    right.write(angles[2]);
-    gripper.write(angles[3]);
+  void setServo(int b, int l, int r, int g, unsigned long &lastTime) {
+    bottom.write(b);
+    left.write(l);
+    right.write(r);
+    gripper.write(g);
     // Serial.print("set bottom: ");
-    // Serial.print(angles[0], DEC);
+    // Serial.print(b, DEC);
     // Serial.print(" left: ");
-    // Serial.print(angles[1], DEC);
+    // Serial.print(l, DEC);
     // Serial.print(" right: ");
-    // Serial.print(angles[2], DEC);
+    // Serial.print(r, DEC);
     // Serial.print(" gripper: ");
-    // Serial.println(angles[3], DEC);
+    // Serial.println(g, DEC);
     lastTime = millis();
+  }
+  void setServo(int const (&angles)[4], unsigned long &lastTime) {
+    setServo(angles[0], angles[1], angles[2], angles[3], lastTime);
   }
 
   void ignoreButtonMsg(ButtonState const &clickedButton, char const*const name) {
@@ -72,6 +75,30 @@ namespace task3 {
     return Rt_t::on_going;
   }
 
+  RestoreSM::Rt_t RestoreSM::run(ButtonState &clickedButton) {
+      if (clickedButton == ButtonState::none);
+      else {
+        ignoreButtonMsg(clickedButton, "Restoring");
+      }
+
+      switch (state) {
+        case State::start:
+          state = State::restore;
+          [[gnu::fallthrough]];
+        case State::restore:
+          setServo(90, 90, 90, 0, lastTime);
+          state = State::waitForReach;
+          break; // [[gnu::fallthrough]]; // 此处一定会等待一段时间，故没必要做fallthrough性能优化
+        case State::waitForReach:
+          if ( simple_timer::every(lastTime, 1800) ) {
+            reset_fsm();
+            return Rt_t::on_cpl;
+          }
+          break;
+      }
+      return Rt_t::on_going;
+    }
+
   Task3SM::Rt_t Task3SM::run(ButtonState &clickedButton) {
     switch ( state ) {
       case State::start:
@@ -114,6 +141,16 @@ namespace task3 {
       case State::play:
         break;
       case State::restore:
+        {
+          RestoreSM::Rt_t subSM_rt = restoreSM.run(clickedButton);
+          if (subSM_rt == RestoreSM::Rt_t::on_cpl) {
+            reset_fsm();
+            return Rt_t::on_going;
+          }
+          else if (subSM_rt == RestoreSM::Rt_t::on_going) {
+            break;
+          }
+        }
         break;
     }
     return Rt_t::on_going;
@@ -152,6 +189,7 @@ namespace task3 {
       }
     }
 
+    // 若想要任何按钮信号不被静默丢弃，任何一个状态中（或fallthrough中的至少一个）都需要确保处理按钮状态
     static Task3SM rootSM{};
     rootSM.run(clickedButton);
 
