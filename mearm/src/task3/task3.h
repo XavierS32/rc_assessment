@@ -25,28 +25,28 @@ namespace task3 {
     unsigned long lastTime;
 
     // Actions
-    // c++11中，类中的static constexpr需要在.cpp中提供一个类外定义，否则链接过程存在问题，在这里为了方便使用宏
-#define Asize 4
-    int const A[Asize][4] = {
+    static constexpr size_t A_size = 4;
+    int const A[A_size][4] = {
       {90, 12, 126, 0},
       {90, 12, 126, 78},
       {54, 42, 126, 78},
       {54, 42, 126, 0}
     };
 
-#define Bsize 1
-    int const B[Bsize][4] = {
+    static constexpr size_t B_size = 1;
+    int const B[B_size][4] = {
       {90, 90, 90, 0}
     };
 
-#define Csize 2
-    int const C[Csize][4] = {
+    static constexpr size_t C_size = 2;
+    int const C[C_size][4] = {
       {180, 90, 90, 0},
       {90, 90, 90, 0}
     };
 
-    int const (*actions[3])[4] = {A, B, C};
-    size_t const actionSize[3] = {Asize, Bsize, Csize};
+    static constexpr size_t Action_size = 3;
+    int const (*actions[Action_size])[4] = {A, B, C};
+    size_t const actionsSize[Action_size] = {A_size, B_size, C_size};
     size_t actionIndex = 0;
 
     // in one action

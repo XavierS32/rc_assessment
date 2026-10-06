@@ -47,7 +47,7 @@ namespace task3 {
       case State::moveOnce:
         setServo( actions[actionIndex][subIndex], lastTime );
         state = State::waitForReach;
-        break; // [[gnu::fallthrough]];
+        break; // [[gnu::fallthrough]]; // 此处一定会等待一段时间，故没必要做fallthrough性能优化
       case State::waitForReach:
         if ( simple_timer::every(lastTime, 1800) ) {
           state = State::isEnd;
@@ -57,9 +57,9 @@ namespace task3 {
           break;
         }
       case State::isEnd:
-        if (subIndex == actionSize[actionIndex] - 1) {
+        if (subIndex == actionsSize[actionIndex] - 1) {
           subIndex = 0;
-          actionIndex = (actionIndex + 1) % 3;
+          actionIndex = (actionIndex + 1) % Action_size;
           reset_fsm();
           return Rt_t::on_cpl;
         }
