@@ -72,7 +72,7 @@ namespace task3 {
 
   private:
       void reset_fsm() {
-        state = State::idle;
+        state = State::start;
       }
   };
 
