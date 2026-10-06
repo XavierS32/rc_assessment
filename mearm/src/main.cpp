@@ -1,9 +1,10 @@
 #include <Arduino.h>
 #include <Servo.h>
-#include "servo_helper/servo_helper.h"
-#include "task1/task1.h"
 #include <line_buffered_input.h>
 #include <prefix_matcher.h>
+#include "servo_helper/servo_helper.h"
+#include "task1/task1.h"
+#include "task3/task3.h"
 
 Servo bottom;
 Servo left;
