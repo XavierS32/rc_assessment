@@ -88,7 +88,7 @@ namespace task3 {
           || clickedButton == ButtonState::second);
     else if (clickedButton == ButtonState::first
           || clickedButton == ButtonState::third) {
-      ignoreButtonMsg(clickedButton, "LoopMoving");
+      ignoreButtonMsg(clickedButton, "Record");
     }
     else if (clickedButton == ButtonState::fourth) {
       reset_fsm();
@@ -98,7 +98,7 @@ namespace task3 {
     switch (state) {
       case State::start:
         state = State::test;
-        [[gun::fallthrough]];
+        [[gnu::fallthrough]];
       case State::test:
         Serial.println("testing");
         break;
