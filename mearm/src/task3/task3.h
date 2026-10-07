@@ -17,6 +17,7 @@ namespace task3 {
 
   enum class fsm_rt_t { FSM_RT_T_VALUES };
 
+  // 该状态机即使cpl后仍存在持续的内部状态，需要时需要在上层状态机手动传递信号使其彻底复位
   class LoopMovingSM {
   public:
     enum class State { start, moveOnce, waitForReach, isEnd } state = State::start;
@@ -52,12 +53,31 @@ namespace task3 {
     // in one action
     size_t subIndex = 0;
 
-    Rt_t run(ButtonState &clickedButton);
+    Rt_t run(ButtonState &clickedButton, bool reset);
+
+    void reset_keeping_state() {
+      state = State::start;
+    }
 
   private:
     void reset_fsm() {
       state = State::start;
+      actionIndex = 0;
+      subIndex = 0;
     }
+  };
+
+  class RecordSM {
+  public:
+    enum class State { start, test } state = State::start;
+    enum class Rt_t { FSM_RT_T_VALUES, restore };
+
+    Rt_t run(ButtonState &clickedButton, bool reset);
+
+    private:
+      void reset_fsm() {
+        state = State::start;
+      }
   };
 
   class RestoreSM {
@@ -67,7 +87,7 @@ namespace task3 {
 
     unsigned long lastTime;
 
-    Rt_t run(ButtonState &clickedButton);
+    Rt_t run(ButtonState &clickedButton, bool reset);
 
     private:
       void reset_fsm() {
@@ -77,17 +97,20 @@ namespace task3 {
 
   class Task3SM {
   public:
-    enum class State { start, idle, loopMoving, recording, play, restore } state = State::start;
+    enum class State { start, idle, loopMoving, record, play, restore } state = State::start;
     enum class Rt_t { FSM_RT_T_VALUES };
 
     LoopMovingSM loopMovingSM;
+    RecordSM recordSM;
     RestoreSM restoreSM;
 
-    Rt_t run(ButtonState &clickedButton);
+    Rt_t run(ButtonState &clickedButton, bool reset);
 
   private:
       void reset_fsm() {
         state = State::start;
+        ButtonState tmp = ButtonState::none;
+        loopMovingSM.run(tmp, true);
       }
   };
 

@@ -31,8 +31,12 @@ namespace task3 {
     Serial.println("\' ignored.");
   }
 
-  LoopMovingSM::Rt_t LoopMovingSM::run(ButtonState &clickedButton) {
-    if (clickedButton == ButtonState::none);
+  LoopMovingSM::Rt_t LoopMovingSM::run(ButtonState &clickedButton, bool reset) {
+    if (reset) {
+      reset_fsm();
+      return Rt_t::on_cpl;
+    }
+    else if (clickedButton == ButtonState::none);
     else if (clickedButton == ButtonState::first
           || clickedButton == ButtonState::second
           || clickedButton == ButtonState::third) {
@@ -63,20 +67,51 @@ namespace task3 {
         if (subIndex == actionsSize[actionIndex] - 1) {
           subIndex = 0;
           actionIndex = (actionIndex + 1) % Action_size;
-          reset_fsm();
+          reset_keeping_state();
           return Rt_t::on_cpl;
         }
         else {
           subIndex++;
-          reset_fsm();
+          state = State::moveOnce;
         }
         break;
     }
     return Rt_t::on_going;
   }
 
-  RestoreSM::Rt_t RestoreSM::run(ButtonState &clickedButton) {
-      if (clickedButton == ButtonState::none);
+  RecordSM::Rt_t RecordSM::run(ButtonState &clickedButton, bool reset) {
+    if (reset) {
+      reset_fsm();
+      return Rt_t::on_cpl;
+    }
+    else if (clickedButton == ButtonState::none
+          || clickedButton == ButtonState::second);
+    else if (clickedButton == ButtonState::first
+          || clickedButton == ButtonState::third) {
+      ignoreButtonMsg(clickedButton, "LoopMoving");
+    }
+    else if (clickedButton == ButtonState::fourth) {
+      reset_fsm();
+      return Rt_t::restore;
+    }
+
+    switch (state) {
+      case State::start:
+        state = State::test;
+        [[gun::fallthrough]];
+      case State::test:
+        Serial.println("testing");
+        break;
+    }
+    return Rt_t::on_going;
+  }
+
+  RestoreSM::Rt_t RestoreSM::run(ButtonState &clickedButton, bool reset) {
+      if (reset) {
+        reset_fsm();
+        return Rt_t::on_cpl;
+      }
+      else if (clickedButton == ButtonState::none);
       else {
         ignoreButtonMsg(clickedButton, "Restoring");
       }
@@ -99,18 +134,22 @@ namespace task3 {
       return Rt_t::on_going;
     }
 
-  Task3SM::Rt_t Task3SM::run(ButtonState &clickedButton) {
+  Task3SM::Rt_t Task3SM::run(ButtonState &clickedButton, bool reset) {
     switch ( state ) {
       case State::start:
         state = State::idle;
         [[gnu::fallthrough]];
       case State::idle:
-        if (clickedButton == ButtonState::none);
+        if (reset) {
+          reset_fsm();
+          return Rt_t::on_cpl;
+        }
+        else if (clickedButton == ButtonState::none);
         else if (clickedButton == ButtonState::first) {
           state = State::loopMoving;
         }
         else if (clickedButton == ButtonState::second) {
-          state = State::recording;
+          state = State::record;
         }
         else if (clickedButton == ButtonState::third) {
           state = State::play;
@@ -122,34 +161,37 @@ namespace task3 {
       case State::loopMoving:
         {
           // static LoopMovingSM subSM{};
-          LoopMovingSM::Rt_t subSM_rt = loopMovingSM.run(clickedButton);
+          LoopMovingSM::Rt_t subSM_rt = loopMovingSM.run(clickedButton, reset);
           if (subSM_rt == LoopMovingSM::Rt_t::restore) {
             state = State::restore;
-            break;
           }
           else if (subSM_rt == LoopMovingSM::Rt_t::on_cpl) {
-            reset_fsm();
-            return Rt_t::on_going;
+            state = State::idle;
           }
-          else if (subSM_rt == LoopMovingSM::Rt_t::on_going) {
-            break;
-          }
+          else if (subSM_rt == LoopMovingSM::Rt_t::on_going);
         }
         break;
-      case State::recording:
+      case State::record:
+        {
+          RecordSM::Rt_t subSM_rt = recordSM.run(clickedButton, reset);
+          if (subSM_rt == RecordSM::Rt_t::restore) {
+            state = State::restore;
+          }
+          else if (subSM_rt == RecordSM::Rt_t::on_cpl) {
+            state = State::idle;
+          }
+          else if (subSM_rt == RecordSM::Rt_t::on_going);
+        }
         break;
       case State::play:
         break;
       case State::restore:
         {
-          RestoreSM::Rt_t subSM_rt = restoreSM.run(clickedButton);
+          RestoreSM::Rt_t subSM_rt = restoreSM.run(clickedButton, reset);
           if (subSM_rt == RestoreSM::Rt_t::on_cpl) {
-            reset_fsm();
-            return Rt_t::on_going;
+            state = State::idle;
           }
-          else if (subSM_rt == RestoreSM::Rt_t::on_going) {
-            break;
-          }
+          else if (subSM_rt == RestoreSM::Rt_t::on_going);
         }
         break;
     }
@@ -161,7 +203,9 @@ namespace task3 {
   }
 
   bool loop() {
+    // 本来更优雅的表达应该是 < ButtonState | bool > currentEvent，但是c++11无法方便的实现union type
     ButtonState clickedButton = ButtonState::none;
+    bool reset = false;
     if (Serial.available() > 0) {
       char ch = Serial.read();
       // Serial.print("got serial command: ");
@@ -181,17 +225,20 @@ namespace task3 {
           clickedButton = ButtonState::fourth;
           break;
         case 'q':
-          // TODO 在状态机内有序释放退出（如果录制部分直接退出会出现问题的话）
-          return true;
+          reset = true;
           break;
         default:
           break;
       }
     }
 
-    // 若想要任何按钮信号不被静默丢弃，任何一个状态中（或fallthrough中的至少一个）都需要确保处理按钮状态
+    // 若想要任何按钮信号/退出指令不被静默丢弃，任何一个状态中（或fallthrough中的至少一个）都需要确保处理按钮状态/退出指令
     static Task3SM rootSM{};
-    rootSM.run(clickedButton);
+    Task3SM::Rt_t rootSM_rt = rootSM.run(clickedButton, reset);
+    if (rootSM_rt == Task3SM::Rt_t::on_cpl) {
+      return true;
+    }
+    else if (rootSM_rt == Task3SM::Rt_t::on_going);
 
     return false;
   }
