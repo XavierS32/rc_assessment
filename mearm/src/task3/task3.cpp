@@ -166,6 +166,10 @@ namespace task3 {
             state = State::restore;
           }
           else if (subSM_rt == LoopMovingSM::Rt_t::on_cpl) {
+            if (reset) {
+              reset_fsm();
+              return Rt_t::on_cpl;
+            }
             state = State::idle;
           }
           else if (subSM_rt == LoopMovingSM::Rt_t::on_going);
@@ -178,6 +182,10 @@ namespace task3 {
             state = State::restore;
           }
           else if (subSM_rt == RecordSM::Rt_t::on_cpl) {
+            if (reset) {
+              reset_fsm();
+              return Rt_t::on_cpl;
+            }
             state = State::idle;
           }
           else if (subSM_rt == RecordSM::Rt_t::on_going);
@@ -189,6 +197,10 @@ namespace task3 {
         {
           RestoreSM::Rt_t subSM_rt = restoreSM.run(clickedButton, reset);
           if (subSM_rt == RestoreSM::Rt_t::on_cpl) {
+            if (reset) {
+              reset_fsm();
+              return Rt_t::on_cpl;
+            }
             state = State::idle;
           }
           else if (subSM_rt == RestoreSM::Rt_t::on_going);
