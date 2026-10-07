@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <Servo.h>
 #include <simple_timer.h>
+#include <pi_joystick.h>
 #include "task3.h"
 
 namespace task3 {
@@ -52,11 +53,11 @@ namespace task3 {
         state = State::moveOnce;
         [[gnu::fallthrough]];
       case State::moveOnce:
-        setServo( actions[actionIndex][subIndex], lastTime );
+        setServo( actions[actionIndex][subIndex], lastMoveTime );
         state = State::waitForReach;
         break; // [[gnu::fallthrough]]; // 此处一定会等待一段时间，故没必要做fallthrough性能优化
       case State::waitForReach:
-        if ( simple_timer::every(lastTime, 1800) ) {
+        if ( simple_timer::every(lastMoveTime, 1800) ) {
           state = State::isEnd;
           [[gnu::fallthrough]];
         }
@@ -79,7 +80,7 @@ namespace task3 {
     return Rt_t::on_going;
   }
 
-  RecordSM::Rt_t RecordSM::run(ButtonState &clickedButton, bool reset) {
+  RecordSM::Rt_t RecordSM::run(ButtonState &clickedButton, bool reset, ActionRecord *(&actionRecords), size_t &actionRecordsSize, size_t &actionRecordsIndex) {
     if (reset) {
       reset_fsm();
       return Rt_t::on_cpl;
@@ -97,10 +98,112 @@ namespace task3 {
 
     switch (state) {
       case State::start:
-        state = State::test;
+        {
+          // 亮信号灯，打印信息
+          digitalWrite(3, HIGH);
+          Serial.println("record start");
+          // 初始化每次判定移动移动度数的计时器
+          lastMoveTime = millis();
+          // 将四个摇杆维度初始状态均设为置中
+          for (auto &i : joystickStates) {
+            i = PiJoystick::State::idle;
+          }
+          // 初始化舵机当前目标位置
+          target_bottom_x1000 = static_cast<long>(bottom.read()) * 1000L;
+          target_left_x1000 = static_cast<long>(left.read()) * 1000L;
+          target_right_x1000 = static_cast<long>(right.read()) * 1000L;
+          target_gripper_x1000 = static_cast<long>(gripper.read()) * 1000L;
+          // 将index设为0，从头开始重新写入
+          actionRecordsIndex = 0;
+          // log第一个状态
+          startTime = millis();
+          bool succeed = addRecord( ActionRecord{target_bottom_x1000,
+                                                  target_left_x1000,
+                                                  target_right_x1000,
+                                                  target_gripper_x1000,
+                                                  0}, actionRecords, actionRecordsSize, actionRecordsIndex );
+          if ( !succeed ) {
+            Serial.println("OOM, record stops");
+            reset_fsm();
+            return Rt_t::on_cpl;
+          }
+          state = State::record;
+        }
         [[gnu::fallthrough]];
-      case State::test:
-        Serial.println("testing");
+      case State::record:
+        {
+          unsigned long nowTime = millis();
+          unsigned long deltaTime = nowTime - lastMoveTime;
+
+          // angle per second = angle per millisecond * 1000
+          target_bottom_x1000 = constrain( target_bottom_x1000 + static_cast<short>(joystickStates[0])*static_cast<signed long>(deltaTime)*speed, 0L, 180000L );
+          target_left_x1000 = constrain( target_left_x1000 + static_cast<short>(joystickStates[1])*static_cast<signed long>(deltaTime)*speed, 0L, 110000L );
+          target_right_x1000 = constrain( target_right_x1000 + static_cast<short>(joystickStates[2])*static_cast<signed long>(deltaTime)*speed, 50000L, 110000L );
+          target_gripper_x1000 = constrain( target_gripper_x1000 + static_cast<short>(joystickStates[3])*static_cast<signed long>(deltaTime)*speed, 0L, 77000L );
+          // static unsigned long lt = millis();
+          // if (simple_timer::every(lt, 800)){char buf[64];
+          // sprintf(buf, "target_x1000: %ld\t%ld\t%ld\t%ld\n", target_bottom_x1000, target_left_x1000, target_right_x1000, target_gripper_x1000);
+          // Serial.println(buf);
+          // char buf2[64];
+          // sprintf(buf2, "      target: %ld\t%ld\t%ld\t%ld\n", target_bottom_x1000/1000, target_left_x1000/1000, target_right_x1000/1000, target_gripper_x1000/1000);
+          // Serial.println(buf2);}
+          bottom.write( target_bottom_x1000 / 1000 );
+          left.write( target_left_x1000 / 1000 );
+          right.write( target_right_x1000 / 1000 );
+          gripper.write( target_gripper_x1000 / 1000 );
+
+          lastMoveTime = nowTime;
+
+          // 处理button2
+          if (clickedButton == ButtonState::second) {
+            // 记录停止时的状态
+            bool succeed = addRecord( ActionRecord{target_bottom_x1000,
+                                                   target_left_x1000,
+                                                   target_right_x1000,
+                                                   target_gripper_x1000,
+                                                   nowTime - startTime}, actionRecords, actionRecordsSize, actionRecordsIndex );
+            if (!succeed) {
+              Serial.println("OOM, record stops");
+              reset_fsm();
+              return Rt_t::on_cpl;
+            }
+            Serial.println("record stops");
+            reset_fsm();
+            return Rt_t::on_cpl;
+          }
+          // Serial.println("testing");
+          // when leaving the state: digitalWrite(3, LOW);
+
+          PiJoystick::State nowJoystickStates[4];
+          nowJoystickStates[0] = bottomStick.stableRead();
+          nowJoystickStates[1] = leftStick.stableRead();
+          nowJoystickStates[2] = rightStick.stableRead();
+          nowJoystickStates[3] = gripperStick.stableRead();
+          // Serial.print((int)nowJoystickStates[0], DEC);
+          // Serial.print(" ");
+          // Serial.print((int)nowJoystickStates[1], DEC);
+          // Serial.print(" ");
+          // Serial.print((int)nowJoystickStates[2], DEC);
+          // Serial.print(" ");
+          // Serial.println((int)nowJoystickStates[3], DEC);
+          // Serial.println();
+
+          if ( !array_equal(nowJoystickStates, joystickStates) ) {
+            // log the servo angles
+            Serial.println("State changed");
+            bool succeed = addRecord( ActionRecord{target_bottom_x1000,
+                                                   target_left_x1000,
+                                                   target_right_x1000,
+                                                   target_gripper_x1000,
+                                                   nowTime - startTime}, actionRecords, actionRecordsSize, actionRecordsIndex );
+            if (!succeed) {
+              Serial.println("OOM, record stops");
+              reset_fsm();
+              return Rt_t::on_cpl;
+            }
+            array_copy(nowJoystickStates, joystickStates); // 其实声明两个数组，然后用指针互换更高效
+          }
+        }
         break;
     }
     return Rt_t::on_going;
@@ -121,11 +224,11 @@ namespace task3 {
           state = State::restore;
           [[gnu::fallthrough]];
         case State::restore:
-          setServo(90, 90, 90, 0, lastTime);
+          setServo(90, 90, 90, 0, lastMoveTime);
           state = State::waitForReach;
           break; // [[gnu::fallthrough]]; // 此处一定会等待一段时间，故没必要做fallthrough性能优化
         case State::waitForReach:
-          if ( simple_timer::every(lastTime, 1800) ) {
+          if ( simple_timer::every(lastMoveTime, 1800) ) {
             reset_fsm();
             return Rt_t::on_cpl;
           }
@@ -177,7 +280,7 @@ namespace task3 {
         break;
       case State::record:
         {
-          RecordSM::Rt_t subSM_rt = recordSM.run(clickedButton, reset);
+          RecordSM::Rt_t subSM_rt = recordSM.run(clickedButton, reset, actionRecords, actionRecordsSize, actionRecordsIndex);
           if (subSM_rt == RecordSM::Rt_t::restore) {
             state = State::restore;
           }
@@ -211,6 +314,7 @@ namespace task3 {
   }
 
   void setup() {
+    pinMode(3, OUTPUT);
     Serial.println("task3 start");
   }
 
@@ -253,5 +357,28 @@ namespace task3 {
     else if (rootSM_rt == Task3SM::Rt_t::on_going);
 
     return false;
+  }
+
+  // 自动尝试申请内存来储存记录，如果申请失败，返回false，成功返回true并更新储存状态
+  // TODO：设计思考：程序中没有其他地方用heap（如果用的其他库中也没有的话），所以这里的realloc大概率不会出现碎片问题
+  // 然而，这也意味着这里没有理由使用动态的realloc，静态数组已经可以满足要求，而且高度可控
+  // avr中缺乏内存保护机制，因此stack可能会静默与heap互相覆盖，导致非常诡异的问题，所以这里无硬上限的realloc其实有风险
+  // 因此实际上应该设计为经过大小计算给stack留下足够空间的*静态*数组。有空的时候会改写这里
+  bool addRecord(ActionRecord actionRecord, ActionRecord *(&actionRecords), size_t &actionRecordsSize, size_t &actionRecordsIndex) {
+    constexpr size_t newSizeOneTime = 10;
+    if (actionRecordsIndex == actionRecordsSize) {
+      ActionRecord *tmp;
+      tmp = static_cast<ActionRecord*>( realloc( static_cast<void*>(actionRecords), sizeof(ActionRecord) * (actionRecordsSize + newSizeOneTime) ) );
+      if ( tmp == nullptr ) {
+        return false;
+      }
+      else {
+        actionRecords = tmp;
+        actionRecordsSize += newSizeOneTime;
+      }
+    }
+    actionRecords[actionRecordsIndex] = actionRecord;
+    actionRecordsIndex++;
+    return true;
   }
 }
