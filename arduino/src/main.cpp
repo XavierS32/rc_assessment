@@ -5,9 +5,9 @@
 Uart Serial2(PA3 , PA2);
 
 PullUpButton b1(PB10);
-PullUpButton b2(PB10);
-PullUpButton b3(PB10);
-PullUpButton b4(PB10);
+PullUpButton b2(PB11);
+PullUpButton b3(PB12);
+PullUpButton b4(PB13);
 
 void setup() {
   pinMode(LED_BUILTIN, OUTPUT);
