@@ -154,7 +154,7 @@ namespace task3 {
           // 如果摇杆状态更新，更新录制数组，并以录制数组设定理想运动状态
           if ( !array_equal(nowJoystickStates, joystickStates) ) {
             // 更新录制数组
-            bool full = !addRecord(ActionRecord{ nowJoystickStates[0], nowJoystickStates[1], nowJoystickStates[2], nowJoystickStates[3], relativeTime }, record, actionRecordsSize);
+            bool full = !addRecord(ActionRecord{ relativeTime, packStates(nowJoystickStates[0], nowJoystickStates[1], nowJoystickStates[2], nowJoystickStates[3]) }, record, actionRecordsSize);
             if (full) { // 此处的行为是经过思考的，当数组满后，其实还可以录制一截沿当前状态运动的过程，直到下一次状态改变无法再被记录，因此此时停止更为合适
               Serial.println("memory full. record stop");
               // 完善record终止部分
@@ -170,10 +170,11 @@ namespace task3 {
             }
             // 以录制数组设定理想运动状态
             ActionRecord &nowAR = record.actionRecords[record.actionRecordsCount - 1];
-            move.changeState(static_cast<short>(nowAR.bottom),
-                             static_cast<short>(nowAR.left),
-                             static_cast<short>(nowAR.right),
-                             static_cast<short>(nowAR.gripper), nowAR.time);
+            move.changeState(unpackState(nowAR.states, 0),
+                             unpackState(nowAR.states, 2),
+                             unpackState(nowAR.states, 4),
+                             unpackState(nowAR.states, 6),
+                             nowAR.time);
             // 更新当前摇杆状态以便下次判断
             array_copy(nowJoystickStates, joystickStates);
           }
@@ -242,10 +243,11 @@ namespace task3 {
           while (actionRecordsIndex < record.actionRecordsCount
                  && record.actionRecords[actionRecordsIndex].time <= relativeTime) {
             ActionRecord const &nowAR = record.actionRecords[actionRecordsIndex];
-            move.changeState(static_cast<short>(nowAR.bottom),
-                              static_cast<short>(nowAR.left),
-                              static_cast<short>(nowAR.right),
-                              static_cast<short>(nowAR.gripper), nowAR.time);
+            move.changeState(unpackState(nowAR.states, 0),
+                             unpackState(nowAR.states, 2),
+                             unpackState(nowAR.states, 4),
+                             unpackState(nowAR.states, 6),
+                             nowAR.time);
             ++actionRecordsIndex;
           }
           // 如果时间超过的结束时间，将目标位置设为结束的那一刻

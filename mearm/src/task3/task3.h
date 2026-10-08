@@ -18,10 +18,10 @@ namespace task3 {
 
   enum class fsm_rt_t { FSM_RT_T_VALUES };
 
-  constexpr size_t actionRecordsSize = 30; // 必须>=1
+  constexpr size_t actionRecordsSize = 60; // 必须>=1
   struct ActionRecord {
-    PiJoystick::State bottom, left, right, gripper; // 变化后的摇杆状态
     unsigned long time; // 变化被记录的时间
+    uint8_t states; // PiJoystick::State bottom, left, right, gripper; 使用packStates和unpackState编解码 // 变化后的摇杆状态
   };
   struct Record {
     bool is_complete_record = false; // 是否完整的完成了录制
@@ -31,6 +31,32 @@ namespace task3 {
     ActionRecord actionRecords[actionRecordsSize];
     size_t actionRecordsCount;
   } extern record;
+
+  // 其实将ActionRecord中PiJoystick::State实际上只有三个值-1 0 1，所以可以用位运算的方式压缩体积是我自己的想法
+  // 但限于时间原因没有自己仔细去研究，这里的三个函数都是gpt写的
+  inline uint8_t encodeState(PiJoystick::State state) {
+    return static_cast<uint8_t>(
+      static_cast<int>(state) + 1
+    );
+  }
+
+  inline uint8_t packStates(
+    PiJoystick::State b,
+    PiJoystick::State l,
+    PiJoystick::State r,
+    PiJoystick::State g
+  ) {
+    return encodeState(b)
+        | (encodeState(l) << 2)
+        | (encodeState(r) << 4)
+        | (encodeState(g) << 6);
+  }
+
+  inline short unpackState(uint8_t packed, uint8_t shift) {
+    return static_cast<short>(
+      static_cast<int>((packed >> shift) & 0x03u) - 1
+    );
+  }
 
   class Move {
   public:
