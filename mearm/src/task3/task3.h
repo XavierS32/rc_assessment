@@ -18,9 +18,61 @@ namespace task3 {
 
   enum class fsm_rt_t { FSM_RT_T_VALUES };
 
+  constexpr size_t actionRecordsSize = 30; // 必须>=1
   struct ActionRecord {
-    long bottom_x1000, left_x1000, right_x1000, gripper_x1000;
-    unsigned long time;
+    PiJoystick::State bottom, left, right, gripper; // 变化后的摇杆状态
+    unsigned long time; // 变化被记录的时间
+  };
+  struct Record {
+    bool is_complete_record = false; // 是否完整的完成了录制
+    int start_bottom, start_left, start_right, start_gripper; // 初始舵机角度
+    unsigned long stopTime; // 停止的录制时间，令开始时间为0
+    int speed; // angle per second
+    ActionRecord actionRecords[actionRecordsSize];
+    size_t actionRecordsCount;
+  } extern record;
+
+  class Move {
+  public:
+    long lastState_bottom_x1000, lastState_left_x1000, lastState_right_x1000, lastState_gripper_x1000; // 上一次状态转变那一刻电机角度*1000
+    short bottom_state = 0, left_state = 0, right_state = 0, gripper_state = 0; // -1 0 1，摇杆状态
+    unsigned long lastStateChangeTime; // 上一次状态转变那一刻的时间
+    int speed; // angle per second
+    // 设定基础状态
+    void set_init(int bottom, int left, int right, int gripper, unsigned long time, int speed) {
+      lastState_bottom_x1000 = bottom * 1000L;
+      lastState_left_x1000 = left * 1000L;
+      lastState_right_x1000 = right * 1000L;
+      lastState_gripper_x1000 = gripper * 1000L;
+      lastStateChangeTime = time;
+      this->speed = speed;
+      bottom_state = 0;
+      left_state = 0;
+      right_state = 0;
+      gripper_state = 0;
+    }
+    // 计算给定时间的理想位置
+    void computeThisTime(unsigned long time, long &bottom_x1000, long &left_x1000, long &right_x1000, long &gripper_x1000) {
+      unsigned long deltaTime = time - lastStateChangeTime;
+      // angle per second = angle per millisecond * 1000
+      bottom_x1000 = lastState_bottom_x1000 + bottom_state * static_cast<signed long>(deltaTime) * speed;
+      left_x1000 = lastState_left_x1000 + left_state * static_cast<signed long>(deltaTime) * speed;
+      right_x1000 = lastState_right_x1000 + right_state * static_cast<signed long>(deltaTime) * speed;
+      gripper_x1000 = lastState_gripper_x1000 + gripper_state * static_cast<signed long>(deltaTime) * speed;
+      bottom_x1000 = constrain(bottom_x1000, 0L, 180000L);
+      left_x1000 = constrain(left_x1000, 0L, 110000L);
+      right_x1000 = constrain(right_x1000, 50000L, 110000L);
+      gripper_x1000 = constrain(gripper_x1000, 0L, 77000L);
+    }
+    // 施加一次摇杆状态变化
+    void changeState(short new_bottom_state, short new_left_state, short new_right_state, short new_gripper_state, unsigned long time) {
+      computeThisTime(time, lastState_bottom_x1000, lastState_left_x1000, lastState_right_x1000, lastState_gripper_x1000);
+      lastStateChangeTime = time;
+      bottom_state = new_bottom_state;
+      left_state = new_left_state;
+      right_state = new_right_state;
+      gripper_state = new_gripper_state;
+    }
   };
 
   // 该状态机即使cpl后仍存在持续的内部状态，需要时需要在上层状态机手动传递信号使其彻底复位
@@ -76,7 +128,9 @@ namespace task3 {
   class RecordSM {
   public:
     enum class State { start, record } state = State::start;
-    enum class Rt_t { FSM_RT_T_VALUES, restore };
+    enum class Rt_t { FSM_RT_T_VALUES, restore = 4 };
+
+    unsigned long startTime;
 
     PiJoystick bottomStick{A0, true};
     PiJoystick leftStick{A1};
@@ -84,19 +138,34 @@ namespace task3 {
     PiJoystick gripperStick{A2};
     PiJoystick::State joystickStates[4];
 
-    unsigned long lastMoveTime, startTime;
-    static constexpr int speed = 30; // angle per second
+    Move move{};
 
-    // avr下int为16位，无法容纳到180,000
-    long target_bottom_x1000, target_left_x1000, target_right_x1000, target_gripper_x1000;
+    Rt_t run(ButtonState &clickedButton, bool reset, Record &record, size_t actionRecordsSize);
 
-    Rt_t run(ButtonState &clickedButton, bool reset, ActionRecord *(&actionRecords), size_t &actionRecordsSize, size_t &actionRecordsIndex);
+  private:
+    void reset_fsm() {
+      digitalWrite(3, LOW);
+      state = State::start;
+    }
+  };
 
-    private:
-      void reset_fsm() {
-        digitalWrite(3, LOW);
-        state = State::start;
-      }
+  class PlaySM {
+  public:
+    enum class State { start, waitForInitMove, playAction } state = State::start;
+    enum class Rt_t { FSM_RT_T_VALUES, restore = 4 };
+
+    unsigned long initStartTime /*初始化设定舵机角度的时间*/, playStartTime /*开始播放的时间*/;
+
+    size_t actionRecordsIndex;
+
+    Move move{};
+
+    Rt_t run(ButtonState &clickedButton, bool reset, Record &record);
+
+  private:
+    void reset_fsm() {
+      state = State::start;
+    }
   };
 
   class RestoreSM {
@@ -119,16 +188,14 @@ namespace task3 {
     enum class State { start, idle, loopMoving, record, play, restore } state = State::start;
     enum class Rt_t { FSM_RT_T_VALUES };
 
-    // 由于RecordSM和PlaySM均需要使用actionRecords，故actionRecords的生命周期应该由Task3SM来负责
-    // RecordSM状态机可能会分配它，Task3SM必须确保其被合理的释放
-    ActionRecord *actionRecords = nullptr;
-    size_t actionRecordsSize = 0, actionRecordsIndex = 0 /* 下一个要写入的index，数值上等于已有个数 */ ;
+    // record需要大量内存，故声明为全局静态变量
 
     LoopMovingSM loopMovingSM{};
     RecordSM recordSM{};
+    PlaySM playSM{};
     RestoreSM restoreSM{};
 
-    Rt_t run(ButtonState &clickedButton, bool reset);
+    Rt_t run(ButtonState &clickedButton, bool reset, Record &record, size_t actionRecordsSize);
 
   private:
       void reset_fsm() {
@@ -136,13 +203,6 @@ namespace task3 {
 
         ButtonState tmp = ButtonState::none;
         loopMovingSM.run(tmp, true);
-
-        if (actionRecords != nullptr) {
-          free(actionRecords);
-          actionRecords = nullptr;
-        }
-        actionRecordsSize = 0;
-        actionRecordsIndex = 0;
       }
   };
 
@@ -167,6 +227,6 @@ namespace task3 {
     }
   }
 
-  // 本来就是临时组装4个target_name_x1000与time传入，因此这里的actionRecord没必要也不能传引用
-  bool addRecord(ActionRecord actionRecord, ActionRecord *(&actionRecords), size_t &actionRecordsSize, size_t &actionRecordsIndex);
+  // 存满无法存储当前值时返回false，否则返回true，actionRecordsSize必须>=1
+  bool addRecord(ActionRecord const &actionRecord, Record &record, size_t const actionRecordsSize);
 }

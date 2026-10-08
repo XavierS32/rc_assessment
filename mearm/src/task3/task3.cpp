@@ -5,6 +5,8 @@
 #include "task3.h"
 
 namespace task3 {
+  Record record;
+
   void setServo(int b, int l, int r, int g, unsigned long &lastTime) {
     bottom.write(b);
     left.write(l);
@@ -25,9 +27,9 @@ namespace task3 {
   }
 
   void ignoreButtonMsg(ButtonState const &clickedButton, char const*const name) {
-    Serial.print("Busy running ");
+    Serial.print("Busy running \'");
     Serial.print(name);
-    Serial.print(", button \'");
+    Serial.print("\', button \'");
     Serial.print(static_cast<int>(clickedButton), DEC);
     Serial.println("\' ignored.");
   }
@@ -80,7 +82,7 @@ namespace task3 {
     return Rt_t::on_going;
   }
 
-  RecordSM::Rt_t RecordSM::run(ButtonState &clickedButton, bool reset, ActionRecord *(&actionRecords), size_t &actionRecordsSize, size_t &actionRecordsIndex) {
+  RecordSM::Rt_t RecordSM::run(ButtonState &clickedButton, bool reset, Record &record, size_t actionRecordsSize) {
     if (reset) {
       reset_fsm();
       return Rt_t::on_cpl;
@@ -98,110 +100,171 @@ namespace task3 {
 
     switch (state) {
       case State::start:
-        {
-          // 亮信号灯，打印信息
-          digitalWrite(3, HIGH);
-          Serial.println("record start");
-          // 初始化每次判定移动移动度数的计时器
-          lastMoveTime = millis();
-          // 将四个摇杆维度初始状态均设为置中
-          for (auto &i : joystickStates) {
-            i = PiJoystick::State::idle;
-          }
-          // 初始化舵机当前目标位置
-          target_bottom_x1000 = static_cast<long>(bottom.read()) * 1000L;
-          target_left_x1000 = static_cast<long>(left.read()) * 1000L;
-          target_right_x1000 = static_cast<long>(right.read()) * 1000L;
-          target_gripper_x1000 = static_cast<long>(gripper.read()) * 1000L;
-          // 将index设为0，从头开始重新写入
-          actionRecordsIndex = 0;
-          // log第一个状态
-          startTime = millis();
-          bool succeed = addRecord( ActionRecord{target_bottom_x1000,
-                                                  target_left_x1000,
-                                                  target_right_x1000,
-                                                  target_gripper_x1000,
-                                                  0}, actionRecords, actionRecordsSize, actionRecordsIndex );
-          if ( !succeed ) {
-            Serial.println("OOM, record stops");
-            reset_fsm();
-            return Rt_t::on_cpl;
-          }
-          state = State::record;
+        // 亮信号灯，打印信息
+        digitalWrite(3, HIGH);
+        Serial.println("record start");
+
+        // 将四个摇杆维度初始状态均设为置中
+        for (auto &i : joystickStates) {
+          i = PiJoystick::State::idle;
         }
+
+        // 初始化record起始部分，及录制计数器
+        record.is_complete_record = false;
+        record.start_bottom = bottom.read();
+        record.start_left = left.read();
+        record.start_right = right.read();
+        record.start_gripper = gripper.read();
+        record.speed = 30;
+        record.actionRecordsCount = 0;
+        startTime = millis();
+
+        // 使用record初始化移动计算，使其在录制和回放时保持一致
+        move.set_init(record.start_bottom, record.start_left, record.start_right, record.start_gripper, 0, record.speed);
+        state = State::record;
         [[gnu::fallthrough]];
       case State::record:
         {
+          // 计算并移动到当前的理论位置
+          // 仅用actionRecords中的数据来move（而move是“无副作用”（与外界隔离）的），故可以保证记录和播放时候理论轨迹完全一致
+          long bottom_x1000, left_x1000, right_x1000, gripper_x1000; // computeThisTime得出的角度值是理论轨迹在当前的映射,computeThisTime本身无任何副作用
           unsigned long nowTime = millis();
-          unsigned long deltaTime = nowTime - lastMoveTime;
+          unsigned long relativeTime = nowTime - startTime;
+          move.computeThisTime(relativeTime, bottom_x1000, left_x1000, right_x1000, gripper_x1000);
+          bottom.write(bottom_x1000 / 1000L);
+          left.write(left_x1000 / 1000L);
+          right.write(right_x1000 / 1000L);
+          gripper.write(gripper_x1000 / 1000L);
 
-          // angle per second = angle per millisecond * 1000
-          target_bottom_x1000 = constrain( target_bottom_x1000 + static_cast<short>(joystickStates[0])*static_cast<signed long>(deltaTime)*speed, 0L, 180000L );
-          target_left_x1000 = constrain( target_left_x1000 + static_cast<short>(joystickStates[1])*static_cast<signed long>(deltaTime)*speed, 0L, 110000L );
-          target_right_x1000 = constrain( target_right_x1000 + static_cast<short>(joystickStates[2])*static_cast<signed long>(deltaTime)*speed, 50000L, 110000L );
-          target_gripper_x1000 = constrain( target_gripper_x1000 + static_cast<short>(joystickStates[3])*static_cast<signed long>(deltaTime)*speed, 0L, 77000L );
-          // static unsigned long lt = millis();
-          // if (simple_timer::every(lt, 800)){char buf[64];
-          // sprintf(buf, "target_x1000: %ld\t%ld\t%ld\t%ld\n", target_bottom_x1000, target_left_x1000, target_right_x1000, target_gripper_x1000);
-          // Serial.println(buf);
-          // char buf2[64];
-          // sprintf(buf2, "      target: %ld\t%ld\t%ld\t%ld\n", target_bottom_x1000/1000, target_left_x1000/1000, target_right_x1000/1000, target_gripper_x1000/1000);
-          // Serial.println(buf2);}
-          bottom.write( target_bottom_x1000 / 1000 );
-          left.write( target_left_x1000 / 1000 );
-          right.write( target_right_x1000 / 1000 );
-          gripper.write( target_gripper_x1000 / 1000 );
-
-          lastMoveTime = nowTime;
-
-          // 处理button2
+          // 处理再次按下button2结束录制
           if (clickedButton == ButtonState::second) {
-            // 记录停止时的状态
-            bool succeed = addRecord( ActionRecord{target_bottom_x1000,
-                                                   target_left_x1000,
-                                                   target_right_x1000,
-                                                   target_gripper_x1000,
-                                                   nowTime - startTime}, actionRecords, actionRecordsSize, actionRecordsIndex );
-            if (!succeed) {
-              Serial.println("OOM, record stops");
-              reset_fsm();
-              return Rt_t::on_cpl;
-            }
-            Serial.println("record stops");
+            // 完善record终止部分
+            record.is_complete_record = true;
+            record.stopTime = relativeTime;
             reset_fsm();
             return Rt_t::on_cpl;
           }
-          // Serial.println("testing");
-          // when leaving the state: digitalWrite(3, LOW);
 
+          // 获取去抖后的摇杆状态
           PiJoystick::State nowJoystickStates[4];
           nowJoystickStates[0] = bottomStick.stableRead();
           nowJoystickStates[1] = leftStick.stableRead();
           nowJoystickStates[2] = rightStick.stableRead();
           nowJoystickStates[3] = gripperStick.stableRead();
-          // Serial.print((int)nowJoystickStates[0], DEC);
-          // Serial.print(" ");
-          // Serial.print((int)nowJoystickStates[1], DEC);
-          // Serial.print(" ");
-          // Serial.print((int)nowJoystickStates[2], DEC);
-          // Serial.print(" ");
-          // Serial.println((int)nowJoystickStates[3], DEC);
-          // Serial.println();
-
+          // 如果摇杆状态更新，更新录制数组，并以录制数组设定理想运动状态
           if ( !array_equal(nowJoystickStates, joystickStates) ) {
-            // log the servo angles
-            Serial.println("State changed");
-            bool succeed = addRecord( ActionRecord{target_bottom_x1000,
-                                                   target_left_x1000,
-                                                   target_right_x1000,
-                                                   target_gripper_x1000,
-                                                   nowTime - startTime}, actionRecords, actionRecordsSize, actionRecordsIndex );
-            if (!succeed) {
-              Serial.println("OOM, record stops");
+            // 更新录制数组
+            bool full = !addRecord(ActionRecord{ nowJoystickStates[0], nowJoystickStates[1], nowJoystickStates[2], nowJoystickStates[3], relativeTime }, record, actionRecordsSize);
+            if (full) { // 此处的行为是经过思考的，当数组满后，其实还可以录制一截沿当前状态运动的过程，直到下一次状态改变无法再被记录，因此此时停止更为合适
+              Serial.println("memory full. record stop");
+              // 完善record终止部分
+              record.is_complete_record = true;
+              record.stopTime = relativeTime;
               reset_fsm();
               return Rt_t::on_cpl;
             }
-            array_copy(nowJoystickStates, joystickStates); // 其实声明两个数组，然后用指针互换更高效
+            else {
+              Serial.print("memory usage: ");
+              Serial.print(actionRecordsSize - record.actionRecordsCount, DEC);
+              Serial.println(" actions left");
+            }
+            // 以录制数组设定理想运动状态
+            ActionRecord &nowAR = record.actionRecords[record.actionRecordsCount - 1];
+            move.changeState(static_cast<short>(nowAR.bottom),
+                             static_cast<short>(nowAR.left),
+                             static_cast<short>(nowAR.right),
+                             static_cast<short>(nowAR.gripper), nowAR.time);
+            // 更新当前摇杆状态以便下次判断
+            array_copy(nowJoystickStates, joystickStates);
+          }
+        }
+        break;
+    }
+    return Rt_t::on_going;
+  }
+
+  PlaySM::Rt_t PlaySM::run(ButtonState &clickedButton, bool reset, Record &record) {
+    if (reset) {
+      reset_fsm();
+      return Rt_t::on_cpl;
+    }
+    else if (clickedButton == ButtonState::none);
+    else if (clickedButton == ButtonState::first
+          || clickedButton == ButtonState::second
+          || clickedButton == ButtonState::third) {
+      ignoreButtonMsg(clickedButton, "Play");
+    }
+    else if (clickedButton == ButtonState::fourth) {
+      reset_fsm();
+      return Rt_t::restore;
+    }
+
+    switch (state)
+    {
+      case State::start:
+        // 首先，检测有无录制。注意，也有可能有录制count为0（什么都没动），这种情况下面也能正常处理
+        if (!record.is_complete_record) {
+          Serial.println("no complete record exists");
+          reset_fsm();
+          return Rt_t::on_cpl;
+        }
+        // 重设播放索引
+        actionRecordsIndex = 0;
+        // 初始化到开始录制的角度
+        Serial.println("initlizing...");
+        bottom.write(record.start_bottom);
+        left.write(record.start_left);
+        right.write(record.start_right);
+        gripper.write(record.start_gripper);
+        initStartTime = millis();
+        state = State::waitForInitMove;
+        [[gnu::fallthrough]];
+      case State::waitForInitMove:
+        if ( millis() - initStartTime < 1800 ) {
+          break;
+        }
+        else {
+          move.set_init(record.start_bottom, record.start_left, record.start_right, record.start_gripper, 0, record.speed);
+          playStartTime = millis();
+          Serial.println("play start");
+          state = State::playAction;
+        }
+        [[gnu::fallthrough]];
+      case State::playAction:
+        {
+          unsigned long nowTime = millis();
+          unsigned long relativeTime = nowTime - playStartTime;
+
+          // 如果到摇杆状态更新的时间了，和录制时相同的，以同样的录制数组设置相应理想运动状态
+          // 注意，这里可能跳过了多个间隔，所以要用循环一次性设置到当前的最终状态
+          // 而且，由于不确定是否跳过了间隔，所以必须先设置到合适的状态，再计算理论位置。
+          // 操作顺序和录制时有出入，但是算法理论保证该时间所设定的理论转角与录制时的该时刻完全相同
+          while (actionRecordsIndex < record.actionRecordsCount
+                 && record.actionRecords[actionRecordsIndex].time <= relativeTime) {
+            ActionRecord const &nowAR = record.actionRecords[actionRecordsIndex];
+            move.changeState(static_cast<short>(nowAR.bottom),
+                              static_cast<short>(nowAR.left),
+                              static_cast<short>(nowAR.right),
+                              static_cast<short>(nowAR.gripper), nowAR.time);
+            ++actionRecordsIndex;
+          }
+          // 如果时间超过的结束时间，将目标位置设为结束的那一刻
+          if (nowTime - playStartTime > record.stopTime) {
+            relativeTime = record.stopTime;
+          }
+
+          // 计算并移动到当前的理论位置
+          long bottom_x1000, left_x1000, right_x1000, gripper_x1000;
+          move.computeThisTime(relativeTime, bottom_x1000, left_x1000, right_x1000, gripper_x1000);
+          bottom.write(bottom_x1000 / 1000L);
+          left.write(left_x1000 / 1000L);
+          right.write(right_x1000 / 1000L);
+          gripper.write(gripper_x1000 / 1000L);
+
+          // 如果达到或超过结束时间，结束播放
+          if (relativeTime == record.stopTime) {
+            reset_fsm();
+            return Rt_t::on_cpl;
           }
         }
         break;
@@ -237,7 +300,7 @@ namespace task3 {
       return Rt_t::on_going;
     }
 
-  Task3SM::Rt_t Task3SM::run(ButtonState &clickedButton, bool reset) {
+  Task3SM::Rt_t Task3SM::run(ButtonState &clickedButton, bool reset, Record &record, size_t actionRecordsSize) {
     switch ( state ) {
       case State::start:
         state = State::idle;
@@ -280,7 +343,7 @@ namespace task3 {
         break;
       case State::record:
         {
-          RecordSM::Rt_t subSM_rt = recordSM.run(clickedButton, reset, actionRecords, actionRecordsSize, actionRecordsIndex);
+          RecordSM::Rt_t subSM_rt = recordSM.run(clickedButton, reset, record, actionRecordsSize);
           if (subSM_rt == RecordSM::Rt_t::restore) {
             state = State::restore;
           }
@@ -295,6 +358,20 @@ namespace task3 {
         }
         break;
       case State::play:
+        {
+          PlaySM::Rt_t subSM_rt = playSM.run(clickedButton, reset, record);
+          if (subSM_rt == PlaySM::Rt_t::restore) {
+            state = State::restore;
+          }
+          else if (subSM_rt == PlaySM::Rt_t::on_cpl) {
+            if (reset) {
+              reset_fsm();
+              return Rt_t::on_cpl;
+            }
+            state = State::idle;
+          }
+          else if (subSM_rt == PlaySM::Rt_t::on_going);
+        }
         break;
       case State::restore:
         {
@@ -350,7 +427,7 @@ namespace task3 {
 
     // 若想要任何按钮信号/退出指令不被静默丢弃，任何一个状态中（或fallthrough中的至少一个）都需要确保处理按钮状态/退出指令
     static Task3SM rootSM{};
-    Task3SM::Rt_t rootSM_rt = rootSM.run(clickedButton, reset);
+    Task3SM::Rt_t rootSM_rt = rootSM.run(clickedButton, reset, record, actionRecordsSize);
     if (rootSM_rt == Task3SM::Rt_t::on_cpl) {
       return true;
     }
@@ -359,26 +436,13 @@ namespace task3 {
     return false;
   }
 
-  // 自动尝试申请内存来储存记录，如果申请失败，返回false，成功返回true并更新储存状态
-  // TODO：设计思考：程序中没有其他地方用heap（如果用的其他库中也没有的话），所以这里的realloc大概率不会出现碎片问题
-  // 然而，这也意味着这里没有理由使用动态的realloc，静态数组已经可以满足要求，而且高度可控
-  // avr中缺乏内存保护机制，因此stack可能会静默与heap互相覆盖，导致非常诡异的问题，所以这里无硬上限的realloc其实有风险
-  // 因此实际上应该设计为经过大小计算给stack留下足够空间的*静态*数组。有空的时候会改写这里
-  bool addRecord(ActionRecord actionRecord, ActionRecord *(&actionRecords), size_t &actionRecordsSize, size_t &actionRecordsIndex) {
-    constexpr size_t newSizeOneTime = 10;
-    if (actionRecordsIndex == actionRecordsSize) {
-      ActionRecord *tmp;
-      tmp = static_cast<ActionRecord*>( realloc( static_cast<void*>(actionRecords), sizeof(ActionRecord) * (actionRecordsSize + newSizeOneTime) ) );
-      if ( tmp == nullptr ) {
-        return false;
-      }
-      else {
-        actionRecords = tmp;
-        actionRecordsSize += newSizeOneTime;
-      }
+  bool addRecord(ActionRecord const &actionRecord, Record &record, size_t const actionRecordsSize) {
+    if (record.actionRecordsCount >= actionRecordsSize) {
+      return false;
     }
-    actionRecords[actionRecordsIndex] = actionRecord;
-    actionRecordsIndex++;
-    return true;
+    else {
+      record.actionRecords[record.actionRecordsCount++] = actionRecord;
+      return true;
+    }
   }
 }
