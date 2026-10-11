@@ -139,6 +139,7 @@ namespace task3 {
           // 处理再次按下button2结束录制
           if (clickedButton == ButtonState::second) {
             // 完善record终止部分
+            Serial.println("record stop");
             record.is_complete_record = true;
             record.stopTime = relativeTime;
             reset_fsm();
@@ -265,6 +266,7 @@ namespace task3 {
 
           // 如果达到或超过结束时间，结束播放
           if (relativeTime == record.stopTime) {
+            Serial.println("play stop");
             reset_fsm();
             return Rt_t::on_cpl;
           }
