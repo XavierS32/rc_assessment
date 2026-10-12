@@ -1,6 +1,7 @@
 #pragma once
 #include <Arduino.h>
 #include <Servo.h>
+#include "fsm.h"
 
 extern Servo bottom;
 extern Servo left;
@@ -8,7 +9,7 @@ extern Servo right;
 extern Servo gripper;
 
 namespace task2 {
-  constexpr int speed = 30; // angle per second
+  enum class Command : short { none = 0, A, B, C };
 
   // Actions
   constexpr size_t A_size = 4;
@@ -69,7 +70,7 @@ namespace task2 {
     // 计算单个电机的理想位置，返回true表示电机到位
     bool computeSingleThisTime(unsigned long deltaTime, long &angle_x1000, long &lastState_angle_x1000, short angle_direction, int target_angle) {
       if ( angle_direction == 0 ) {
-        angle_x1000 = target_angle * 1000L; // 防止未初始化
+        angle_x1000 = target_angle * 1000L; // 即使不需要移动，也需要传出相应的值，不能直接return
         return true;
       }
       // angle per second = angle per millisecond * 1000
@@ -87,6 +88,44 @@ namespace task2 {
         }
       }
       return false;
+    }
+  };
+
+  class MoveSeriesSM {
+  public:
+    enum class State { start, initTarget, moveTillEnd, isEnd } state = State::start;
+    enum class Rt_t { FSM_RT_T_VALUES };
+
+    static constexpr int speed = 30; // angle per second
+
+    MoveTo moveTo{};
+
+    size_t subIndex = 0;
+
+    // 注意，action不得为nullptr，actionSize必须>0，不可=0！
+    Rt_t run(int const action[][4], size_t const actionSize, bool reset);
+
+  private:
+    void reset_fsm() {
+      state = State::start;
+      subIndex = 0;
+    }
+  };
+
+  class Task2SM {
+  public:
+    enum class State { start, idle, moving } state = State::start;
+    enum class Rt_t { FSM_RT_T_VALUES };
+
+    int const (*action)[4] = nullptr;
+    size_t actionSize;
+
+    MoveSeriesSM moveSeriesSM{};
+
+    Rt_t run(Command command, bool reset);
+  private:
+    void reset_fsm() {
+      state = State::start;
     }
   };
 

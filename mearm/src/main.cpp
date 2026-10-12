@@ -4,6 +4,7 @@
 #include <prefix_matcher.h>
 #include "servo_helper/servo_helper.h"
 #include "task1/task1.h"
+#include "task2/task2.h"
 #include "task3/task3.h"
 
 Servo bottom;
@@ -51,7 +52,12 @@ PrefixRule<ProgramFuncs> rules[] = {
       task1::setup(bottom, left, right, gripper); },
     [](char const*const str) {
       return task1::loop(bottom, left, right, gripper); }}},
-   {"task3", ProgramFuncs {
+  {"task2", ProgramFuncs {
+    [](char const*const str) {
+      task2::setup(); },
+    [](char const*const str) {
+      return task2::loop(); }}},
+  {"task3", ProgramFuncs {
     [](char const*const str) {
       task3::setup(); },
     [](char const*const str) {
