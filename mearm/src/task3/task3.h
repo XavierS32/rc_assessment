@@ -3,6 +3,7 @@
 #include <Servo.h>
 #include <simple_timer.h>
 #include <pi_joystick.h>
+#include "task2/task2.h" // 理论上同级的模块不应该相互依赖，包括下面Servo extern也不合理，但是赶时间，只能先粗糙上线了
 
 extern Servo bottom;
 extern Servo left;
@@ -104,34 +105,16 @@ namespace task3 {
   // 该状态机即使cpl后仍存在持续的内部状态，需要时需要在上层状态机手动传递信号使其彻底复位
   class LoopMovingSM {
   public:
-    enum class State { start, moveOnce, waitForReach, isEnd } state = State::start;
+    enum class State { start, initTarget, moveTillEnd, isEnd } state = State::start;
     enum class Rt_t { FSM_RT_T_VALUES, restore = 4 };
 
-    unsigned long lastMoveTime;
+    static constexpr int speed = 30; // angle per second
 
-    // Actions
-    static constexpr size_t A_size = 4;
-    int const A[A_size][4] = {
-      {90, 12, 126, 0},
-      {90, 12, 126, 78},
-      {54, 42, 126, 78},
-      {54, 42, 126, 0}
-    };
-
-    static constexpr size_t B_size = 1;
-    int const B[B_size][4] = {
-      {90, 90, 90, 0}
-    };
-
-    static constexpr size_t C_size = 2;
-    int const C[C_size][4] = {
-      {180, 90, 90, 0},
-      {90, 90, 90, 0}
-    };
+    task2::MoveTo moveTo{};
 
     static constexpr size_t Action_size = 3;
-    int const (*actions[Action_size])[4] = {A, B, C};
-    size_t const actionsSize[Action_size] = {A_size, B_size, C_size};
+    int const (*actions[Action_size])[4] = {task2::A, task2::B, task2::C};
+    size_t const actionsSize[Action_size] = {task2::A_size, task2::B_size, task2::C_size};
     size_t actionIndex = 0;
 
     // in one action

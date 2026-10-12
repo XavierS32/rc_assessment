@@ -52,20 +52,27 @@ namespace task3 {
 
     switch (state) {
       case State::start:
-        state = State::moveOnce;
+        state = State::initTarget;
         [[gnu::fallthrough]];
-      case State::moveOnce:
-        setServo( actions[actionIndex][subIndex], lastMoveTime );
-        state = State::waitForReach;
-        break; // [[gnu::fallthrough]]; // 此处一定会等待一段时间，故没必要做fallthrough性能优化
-      case State::waitForReach:
-        if ( simple_timer::every(lastMoveTime, 1800) ) {
-          state = State::isEnd;
-          [[gnu::fallthrough]];
+      case State::initTarget:
+        {
+          int const (&subAction)[4] = actions[actionIndex][subIndex];
+          moveTo.initTarget(bottom.read(), left.read(), right.read(), gripper.read(),
+                            subAction[0], subAction[1], subAction[2], subAction[3],
+                            millis(), speed);
+          state = State::moveTillEnd;
         }
-        else {
-          break;
+        [[gnu::fallthrough]];
+      case State::moveTillEnd:
+        {
+          unsigned long nowTime = millis();
+          long bottom_x1000, left_x1000, right_x1000, gripper_x1000;
+          if ( moveTo.move(nowTime, bottom_x1000, left_x1000, right_x1000, gripper_x1000) ) {
+            state = State::isEnd;
+            break;
+          }
         }
+        break;
       case State::isEnd:
         if (subIndex == actionsSize[actionIndex] - 1) {
           subIndex = 0;
@@ -75,7 +82,7 @@ namespace task3 {
         }
         else {
           subIndex++;
-          state = State::moveOnce;
+          state = State::initTarget;
         }
         break;
     }
