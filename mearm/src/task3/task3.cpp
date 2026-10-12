@@ -11,7 +11,7 @@ namespace task3 {
     bottom.write(b);
     left.write(l);
     right.write(r);
-    gripper.write(g);
+    gripper.setInt(g);
     // Serial.print("set bottom: ");
     // Serial.print(b, DEC);
     // Serial.print(" left: ");
@@ -109,7 +109,7 @@ namespace task3 {
         record.start_bottom = bottom.read();
         record.start_left = left.read();
         record.start_right = right.read();
-        record.start_gripper = gripper.read();
+        record.start_gripper = gripper.readSetInt();
         record.speed = 30;
         record.actionRecordsCount = 0;
         startTime = millis();
@@ -129,7 +129,7 @@ namespace task3 {
           bottom.write(bottom_x1000 / 1000L);
           left.write(left_x1000 / 1000L);
           right.write(right_x1000 / 1000L);
-          gripper.write(gripper_x1000 / 1000L);
+          gripper.setInt(gripper_x1000 / 1000L);
 
           // 处理再次按下button2结束录制
           if (clickedButton == ButtonState::second) {
@@ -212,7 +212,7 @@ namespace task3 {
         bottom.write(record.start_bottom);
         left.write(record.start_left);
         right.write(record.start_right);
-        gripper.write(record.start_gripper);
+        gripper.setInt(record.start_gripper);
         initStartTime = millis();
         state = State::waitForInitMove;
         [[gnu::fallthrough]];
@@ -257,7 +257,7 @@ namespace task3 {
           bottom.write(bottom_x1000 / 1000L);
           left.write(left_x1000 / 1000L);
           right.write(right_x1000 / 1000L);
-          gripper.write(gripper_x1000 / 1000L);
+          gripper.setInt(gripper_x1000 / 1000L);
 
           // 如果达到或超过结束时间，结束播放
           if (relativeTime == record.stopTime) {

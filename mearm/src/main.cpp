@@ -2,6 +2,7 @@
 #include <Servo.h>
 #include <line_buffered_input.h>
 #include <prefix_matcher.h>
+#include "gripper/gripper.h"
 #include "servo_helper/servo_helper.h"
 #include "task1/task1.h"
 #include "task2/task2.h"
@@ -10,13 +11,13 @@
 Servo bottom;
 Servo left;
 Servo right;
-Servo gripper;
+Gripper gripper{};
 
 servo_helper::Actuator actuators[] = {
   {bottom, "bottom"},
   {left, "left"},
   {right, "right"},
-  {gripper, "gripper"}
+  {gripper.servo, "gripper"}
 };
 
 auto state = servo_helper::make_state(actuators, Serial);
@@ -82,12 +83,12 @@ void setup() {
   bottom.attach(9);
   left.attach(8);
   right.attach(7);
-  gripper.attach(6);
+  gripper.attach(2, 6); // 在此处修改舵机控制
 
   bottom.write(90);
   left.write(90);
   right.write(90);
-  gripper.write(0);
+  gripper.set(false);
 
   while(!Serial);
 

@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <limits.h>
 #include <line_buffered_input.h>
+#include "gripper/gripper.h"
 #include "task1.h"
 
 namespace task1 {
@@ -42,7 +43,7 @@ namespace task1 {
 
   // 要求并没有要求转动行为的实现方式，估选择一种最简单的方式，所有电机的移动速度一致，而非到达时间一致
   // 有时候移动速度过小，电机最少一次只能设置移动一度，故当当前时机对应移动角度不足一度时，直接跳过这次移动，积攒到后面一起移动
-  void moveArmOnce(Servo &bottom, Servo &left, Servo &right, Servo &gripper) {
+  void moveArmOnce(Servo &bottom, Servo &left, Servo &right, Gripper &gripper) {
     unsigned long nowMillis = millis();
     unsigned long pastMillis = nowMillis - lastMillis;
     lastMillis = nowMillis;
@@ -58,15 +59,15 @@ namespace task1 {
     }
   }
 
-  void setup(Servo &bottom, Servo &left, Servo &right, Servo &gripper) {
+  void setup(Servo &bottom, Servo &left, Servo &right, Gripper &gripper) {
     target_bottom = bottom.read();
     target_left = left.read();
     target_right = right.read();
     lastMillis = millis();
   }
 
-  bool loop(Servo &bottom, Servo &left, Servo &right, Servo &gripper) {
-    static enum class Mode { Char, Line } mode = Mode::Char;
+  bool loop(Servo &bottom, Servo &left, Servo &right, Gripper &gripper) {
+    static enum class Mode : bool { Char = false, Line = true } mode = Mode::Char;
     constexpr size_t BUF_SIZE = 32;
     static char buf[BUF_SIZE];
     if ( mode == Mode::Char && Serial.available() > 0) {
@@ -75,13 +76,13 @@ namespace task1 {
         case 'o':
         case 'O':
           Serial.read();
-          gripper.write(0);
+          gripper.set(false);
           Serial.println("gripper opens");
           break;
         case 's':
         case 'S':
           Serial.read();
-          gripper.write(76);
+          gripper.set(true);
           Serial.println("gripper closes");
           break;
         case 'h':

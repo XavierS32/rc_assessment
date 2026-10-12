@@ -3,13 +3,14 @@
 #include <Servo.h>
 #include <simple_timer.h>
 #include <pi_joystick.h>
+#include "gripper/gripper.h"
 #include "fsm.h"
 #include "task2/task2.h" // 理论上同级的模块不应该相互依赖，包括下面Servo extern也不合理，但是赶时间，只能先粗糙上线了
 
 extern Servo bottom;
 extern Servo left;
 extern Servo right;
-extern Servo gripper;
+extern Gripper gripper;
 
 namespace task3 {
   enum class ButtonState : short { none = 0, first, second, third, fourth };
