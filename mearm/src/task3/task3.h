@@ -3,6 +3,7 @@
 #include <Servo.h>
 #include <simple_timer.h>
 #include <pi_joystick.h>
+#include "fsm.h"
 #include "task2/task2.h" // 理论上同级的模块不应该相互依赖，包括下面Servo extern也不合理，但是赶时间，只能先粗糙上线了
 
 extern Servo bottom;
@@ -10,12 +11,8 @@ extern Servo left;
 extern Servo right;
 extern Servo gripper;
 
-// https://www.reddit.com/r/cpp_questions/comments/ripfiu/best_way_to_inherit_enum_classes 继承（组合）enum class的野生方法
-#define FSM_RT_T_VALUES \
-on_cpl = 0, on_going = 1
-
 namespace task3 {
-  enum class ButtonState { none = 0, first, second, third, fourth };
+  enum class ButtonState : short { none = 0, first, second, third, fourth };
 
   enum class fsm_rt_t { FSM_RT_T_VALUES };
 
@@ -105,20 +102,15 @@ namespace task3 {
   // 该状态机即使cpl后仍存在持续的内部状态，需要时需要在上层状态机手动传递信号使其彻底复位
   class LoopMovingSM {
   public:
-    enum class State { start, initTarget, moveTillEnd, isEnd } state = State::start;
+    enum class State { start, moveSeries } state = State::start;
     enum class Rt_t { FSM_RT_T_VALUES, restore = 4 };
 
-    static constexpr int speed = 30; // angle per second
-
-    task2::MoveTo moveTo{};
+    task2::MoveSeriesSM moveSeriesSM{};
 
     static constexpr size_t Action_size = 3;
     int const (*actions[Action_size])[4] = {task2::A, task2::B, task2::C};
     size_t const actionsSize[Action_size] = {task2::A_size, task2::B_size, task2::C_size};
     size_t actionIndex = 0;
-
-    // in one action
-    size_t subIndex = 0;
 
     Rt_t run(ButtonState &clickedButton, bool reset);
 
@@ -130,7 +122,12 @@ namespace task3 {
     void reset_fsm() {
       state = State::start;
       actionIndex = 0;
-      subIndex = 0;
+    }
+    void reset_fsm(int const action[][4], size_t const actionSize) {
+      reset_fsm();
+      // 按照本部分前面使用的语义，状态应该传到最深处的子状态机，由其处理，但是后面变动后引用了一个不属于task3的状态机task2::MoveSeriesSM
+      // 改设计被打破。在此处，task2::MoveSeriesSM可以在任何状态被正常的复位，因此状态在LoopMoving被拦截处理，并且直接在LoopMoving的reset中传递信号复位task2::MoveSeriesSM
+      moveSeriesSM.run(action, actionSize, true);
     }
   };
 
