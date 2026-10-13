@@ -65,7 +65,7 @@ namespace task2 {
       bottom.write(bottom_x1000 / 1000);
       left.write(left_x1000 / 1000);
       right.write(right_x1000/1000);
-      gripper.setInt(gripper_x1000 / 1000 == 1);
+      gripper.set(gripper_x1000 / 1000 >= 2);
       return is_ready;
     }
     // 计算单个电机的理想位置，返回true表示电机到位

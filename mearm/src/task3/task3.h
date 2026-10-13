@@ -83,11 +83,14 @@ namespace task3 {
       bottom_x1000 = lastState_bottom_x1000 + bottom_state * static_cast<signed long>(deltaTime) * speed;
       left_x1000 = lastState_left_x1000 + left_state * static_cast<signed long>(deltaTime) * speed;
       right_x1000 = lastState_right_x1000 + right_state * static_cast<signed long>(deltaTime) * speed;
-      gripper_x1000 = lastState_gripper_x1000 + gripper_state * static_cast<signed long>(deltaTime) * speed;
+      // gripper_x1000 = lastState_gripper_x1000 + gripper_state * static_cast<signed long>(deltaTime) * speed;
+      gripper_x1000 = gripper_state == 0 ? lastState_gripper_x1000
+                    : gripper_state == -1 ? 0
+                    : 1000L;
       bottom_x1000 = constrain(bottom_x1000, 0L, 180000L);
       left_x1000 = constrain(left_x1000, 0L, 110000L);
       right_x1000 = constrain(right_x1000, 50000L, 110000L);
-      gripper_x1000 = constrain(gripper_x1000, 0L, 77000L);
+      // gripper_x1000 = constrain(gripper_x1000, 0L, 77000L);
     }
     // 施加一次摇杆状态变化
     void changeState(short new_bottom_state, short new_left_state, short new_right_state, short new_gripper_state, unsigned long time) {
