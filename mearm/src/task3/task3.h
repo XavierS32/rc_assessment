@@ -6,6 +6,7 @@
 #include "button_state/button_state.h"
 #include "gripper/gripper.h"
 #include "fsm.h"
+#include "arm_constrain.h"
 #include "task2/task2.h" // 理论上同级的模块不应该相互依赖，包括下面Servo extern也不合理，但是赶时间，只能先粗糙上线了
 
 extern Servo bottom;
@@ -89,8 +90,8 @@ namespace task3 {
                     : gripper_state == -1 ? 0
                     : 1000L;
       bottom_x1000 = constrain(bottom_x1000, 0L, 180000L);
-      left_x1000 = constrain(left_x1000, 0L, 110000L);
-      right_x1000 = constrain(right_x1000, 50000L, 110000L);
+      left_x1000 = constrain(left_x1000, LEFT_MIN*1000L, LEFT_MAX*1000L);
+      right_x1000 = constrain(right_x1000, RIGHT_MIN*1000L, RIGHT_MAX*1000L);
       // gripper_x1000 = constrain(gripper_x1000, 0L, 77000L);
     }
     // 施加一次摇杆状态变化
