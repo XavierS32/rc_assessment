@@ -6,8 +6,8 @@ public:
   Servo servo/*默认电机*/, servo2/*额外的电机*/;
   short mode = 0; // 状态：0，李的爪子（单电机）；1，林的爪子（双电机）；2，我的爪子（单电机）
   // mn_xx -> mode{n}下，爪子打开与夹紧的角度
-  int m0_close = 140, m0_open = 0;
-  int m1_close = 0/*TODO*/, m1_open = 0;
+  int m0_close = 120, m0_open = 50;
+  int m1_close = 50/*TODO*/, m1_open = 130;
   int m2_close = 77, m2_open = 0;
 
   void attach(short mode, int servoPin) {
@@ -55,13 +55,13 @@ public:
   // 无奈之举，只要没有完全达到张开的角度，就认为已经夹紧了
   bool readSet() {
     if (mode == 0) {
-      return servo.read() > m1_open;
+      return servo.read() > m0_open;
     }
     else if (mode == 1) {
-      return servo.read() > m1_open;
+      return servo.read() </*TODO*/ m1_open;
     }
     else if (mode == 2) {
-      return servo.read() > m1_open;
+      return servo.read() > m2_open;
     }
     return true; // 消除编译器的警告
   }

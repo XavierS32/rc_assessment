@@ -57,15 +57,18 @@ namespace task2 {
       bool bottom_is_ready = computeSingleThisTime(deltaTime, bottom_x1000, lastState_bottom_x1000, bottom_direction, target_bottom);
       bool left_is_ready = computeSingleThisTime(deltaTime, left_x1000, lastState_left_x1000, left_direction, target_left);
       bool right_is_ready = computeSingleThisTime(deltaTime, right_x1000, lastState_right_x1000, right_direction, target_right);
-      bool gripper_is_ready = computeSingleThisTime(deltaTime, gripper_x1000, lastState_gripper_x1000, gripper_direction, target_gripper);
+      // bool gripper_is_ready = computeSingleThisTime(deltaTime, gripper_x1000, lastState_gripper_x1000, gripper_direction, target_gripper);
+      // a dirty hack
+      computeSingleThisTime(deltaTime, gripper_x1000, lastState_gripper_x1000, gripper_direction, target_gripper);
+      bool gripper_is_ready = gripper_direction == 0 ? true : lastStateChangeTime - time >= 500;
       return bottom_is_ready && left_is_ready && right_is_ready && gripper_is_ready;
     }
     bool move(unsigned long time, long &bottom_x1000, long &left_x1000, long &right_x1000, long &gripper_x1000) {
       bool is_ready = computeThisTime(time, bottom_x1000, left_x1000, right_x1000, gripper_x1000);
       bottom.write(bottom_x1000 / 1000);
       left.write(left_x1000 / 1000);
-      right.write(right_x1000/1000);
-      gripper.set(gripper_x1000 / 1000 >= 2);
+      right.write(right_x1000 / 1000);
+      gripper.set(gripper_x1000 / 1000);
       return is_ready;
     }
     // 计算单个电机的理想位置，返回true表示电机到位

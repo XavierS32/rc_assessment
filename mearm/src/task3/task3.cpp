@@ -8,11 +8,14 @@
 namespace task3 {
   Record record;
 
+  // 若g为-1，不改变夹爪状态
   void setServo(int b, int l, int r, int g, unsigned long &lastTime) {
     bottom.write(b);
     left.write(l);
     right.write(r);
-    gripper.setInt(g);
+    if (g != -1) {
+      gripper.setInt(g);
+    }
     // Serial.print("set bottom: ");
     // Serial.print(b, DEC);
     // Serial.print(" left: ");
@@ -272,7 +275,7 @@ namespace task3 {
     return Rt_t::on_going;
   }
 
-  RestoreSM::Rt_t RestoreSM::run(ButtonState &clickedButton, bool reset) {
+  RestoreSM::Rt_t RestoreSM::run(ButtonState &clickedButton, bool reset, bool keep_gripper) {
       if (reset) {
         reset_fsm();
         return Rt_t::on_cpl;
@@ -287,7 +290,10 @@ namespace task3 {
           state = State::restore;
           [[gnu::fallthrough]];
         case State::restore:
-          setServo(90, 90, 90, 0, lastMoveTime);
+          if (keep_gripper)
+            setServo(90, 90, 90, -1, lastMoveTime);
+          else
+            setServo(90, 90, 90, 0, lastMoveTime);
           state = State::waitForReach;
           break; // [[gnu::fallthrough]]; // 此处一定会等待一段时间，故没必要做fallthrough性能优化
         case State::waitForReach:

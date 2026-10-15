@@ -187,7 +187,7 @@ namespace task3 {
 
     unsigned long lastMoveTime;
 
-    Rt_t run(ButtonState &clickedButton, bool reset);
+    Rt_t run(ButtonState &clickedButton, bool reset, bool keep_gripper = false);
 
     private:
       void reset_fsm() {

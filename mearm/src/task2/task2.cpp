@@ -122,7 +122,7 @@ namespace task2 {
       case State::initTarget:
         {
           int const (&subAction)[4] = action[subIndex];
-          moveTo.initTarget(bottom.read(), left.read(), right.read(), gripper.read(),
+          moveTo.initTarget(bottom.read(), left.read(), right.read(), gripper.readSetInt(),
                             subAction[0], subAction[1], subAction[2], subAction[3],
                             millis(), speed);
           state = State::moveTillEnd;

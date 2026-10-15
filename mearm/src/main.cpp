@@ -17,7 +17,8 @@ servo_helper::Actuator actuators[] = {
   {bottom, "bottom"},
   {left, "left"},
   {right, "right"},
-  {gripper.servo, "gripper"}
+  {gripper.servo, "gripper"}/*,
+  {gripper.servo2, "gripper2"}*/
 };
 
 auto state = servo_helper::make_state(actuators, Serial);
@@ -82,8 +83,12 @@ void setup() {
   Serial.begin(9600);
   bottom.attach(9);
   left.attach(8);
+  //left.attach(5);
   right.attach(7);
-  gripper.attach(2, 6); // 在此处修改舵机控制
+  //gripper.attach(1, 6, 13); // 在此处修改舵机控制
+  //gripper.attach(1, 6, 10);
+  gripper.attach(0, 6);
+  // 右 6 左 13
 
   bottom.write(90);
   left.write(90);
