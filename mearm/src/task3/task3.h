@@ -15,11 +15,11 @@ extern Servo right;
 extern Gripper gripper;
 
 namespace task3 {
-  enum class ButtonState : short { none = 0, first, second, third, fourth };
-
   enum class fsm_rt_t { FSM_RT_T_VALUES };
 
   constexpr size_t actionRecordsSize = 60; // 必须>=1
+  void ignoreButtonMsg(ButtonState const &clickedButton, char const*const name);
+
   struct ActionRecord {
     unsigned long time; // 变化被记录的时间
     uint8_t states; // PiJoystick::State bottom, left, right, gripper; 使用packStates和unpackState编解码 // 变化后的摇杆状态
@@ -146,7 +146,7 @@ namespace task3 {
 
     PiJoystick bottomStick{A0, true};
     PiJoystick leftStick{A1};
-    PiJoystick rightStick{A3};
+    PiJoystick rightStick{A3, true};
     PiJoystick gripperStick{A2};
     PiJoystick::State joystickStates[4];
 
