@@ -13,13 +13,13 @@ namespace task2 {
   enum class Command : short { none = 0, A, B, C };
 
   // Actions
-  constexpr size_t A_size = 4;
+  constexpr size_t A_size = 5;
   extern int const A[A_size][4];
 
-  constexpr size_t B_size = 1;
+  constexpr size_t B_size = 6;
   extern int const B[B_size][4];
 
-  constexpr size_t C_size = 2;
+  constexpr size_t C_size = 6;
   extern int const C[C_size][4];
 
   class MoveTo {
