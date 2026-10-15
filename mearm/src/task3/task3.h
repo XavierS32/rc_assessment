@@ -3,6 +3,7 @@
 #include <Servo.h>
 #include <simple_timer.h>
 #include <pi_joystick.h>
+#include "button_state/button_state.h"
 #include "gripper/gripper.h"
 #include "fsm.h"
 #include "task2/task2.h" // 理论上同级的模块不应该相互依赖，包括下面Servo extern也不合理，但是赶时间，只能先粗糙上线了
