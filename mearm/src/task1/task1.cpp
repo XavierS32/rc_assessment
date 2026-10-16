@@ -3,13 +3,14 @@
 #include <stdio.h>
 #include <limits.h>
 #include <line_buffered_input.h>
+#include "gripper/gripper.h"
 #include "task1.h"
 
 namespace task1 {
   LineBufferedInput input{Serial, Serial};
   
   int speed = 1; // angle per second
-  int target_bottom, target_left, target_right;
+  uint8_t target_bottom, target_left, target_right;
   unsigned long lastMillis;
   int restDeltaAngle = 0;
 
@@ -31,18 +32,15 @@ namespace task1 {
   }
 
   // 根据目标角与当前角的大小决定移动方向，并确保移动停止在目标角
-  inline void applyAngle(Servo &servo, int target_angle, int deltaAngle) {
-    int now_angle = servo.read(); // 并非真正当前角度，只是上次write的角度
+  inline void applyAngle(Servo &servo, uint8_t target_angle, int deltaAngle) {
+    uint8_t now_angle = servo.read(); // 并非真正当前角度，只是上次write的角度
     now_angle += constrain(target_angle - now_angle, -deltaAngle, deltaAngle);
     servo.write(now_angle);
-    // char buf[1024];
-    // sprintf(buf, "move to %d, deltaAngle %d\n", now_angle, deltaAngle);
-    // Serial.println(buf);
   }
 
   // 要求并没有要求转动行为的实现方式，估选择一种最简单的方式，所有电机的移动速度一致，而非到达时间一致
   // 有时候移动速度过小，电机最少一次只能设置移动一度，故当当前时机对应移动角度不足一度时，直接跳过这次移动，积攒到后面一起移动
-  void moveArmOnce(Servo &bottom, Servo &left, Servo &right, Servo &gripper) {
+  void moveArmOnce(Servo &bottom, Servo &left, Servo &right, Gripper &gripper) {
     unsigned long nowMillis = millis();
     unsigned long pastMillis = nowMillis - lastMillis;
     lastMillis = nowMillis;
@@ -54,20 +52,19 @@ namespace task1 {
       applyAngle(bottom, target_bottom, nowDeltaAngle);
       applyAngle(left, target_left, nowDeltaAngle);
       applyAngle(right, target_right, nowDeltaAngle);
-      // Serial.println("start move");
     }
   }
 
-  void setup(Servo &bottom, Servo &left, Servo &right, Servo &gripper) {
+  void setup(Servo &bottom, Servo &left, Servo &right, Gripper &gripper) {
     target_bottom = bottom.read();
     target_left = left.read();
     target_right = right.read();
     lastMillis = millis();
   }
 
-  bool loop(Servo &bottom, Servo &left, Servo &right, Servo &gripper) {
-    static enum class Mode { Char, Line } mode = Mode::Char;
-    constexpr size_t BUF_SIZE = 32;
+  bool loop(Servo &bottom, Servo &left, Servo &right, Gripper &gripper) {
+    static enum class Mode : bool { Char = false, Line = true } mode = Mode::Char;
+    constexpr size_t BUF_SIZE = 16;
     static char buf[BUF_SIZE];
     if ( mode == Mode::Char && Serial.available() > 0) {
       char ch = Serial.peek();
@@ -75,13 +72,13 @@ namespace task1 {
         case 'o':
         case 'O':
           Serial.read();
-          gripper.write(0);
+          gripper.set(false);
           Serial.println("gripper opens");
           break;
         case 's':
         case 'S':
           Serial.read();
-          gripper.write(76);
+          gripper.set(true);
           Serial.println("gripper closes");
           break;
         case 'h':
