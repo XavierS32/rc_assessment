@@ -17,16 +17,16 @@ extern Gripper gripper;
 namespace task3 {
   enum class fsm_rt_t { FSM_RT_T_VALUES };
 
-  constexpr size_t actionRecordsSize = 60; // 必须>=1
   void ignoreButtonMsg(ButtonState const &clickedButton, char const*const name);
 
+  constexpr size_t actionRecordsSize = 20; // 必须>=1
   struct ActionRecord {
     unsigned long time; // 变化被记录的时间
     uint8_t states; // PiJoystick::State bottom, left, right, gripper; 使用packStates和unpackState编解码 // 变化后的摇杆状态
   };
   struct Record {
     bool is_complete_record = false; // 是否完整的完成了录制
-    int start_bottom, start_left, start_right, start_gripper; // 初始舵机角度
+    uint8_t start_bottom, start_left, start_right, start_gripper; // 初始舵机角度
     unsigned long stopTime; // 停止的录制时间，令开始时间为0
     int speed; // angle per second
     ActionRecord actionRecords[actionRecordsSize];
@@ -53,8 +53,8 @@ namespace task3 {
         | (encodeState(g) << 6);
   }
 
-  inline short unpackState(uint8_t packed, uint8_t shift) {
-    return static_cast<short>(
+  inline int8_t unpackState(uint8_t packed, uint8_t shift) {
+    return static_cast<int8_t>(
       static_cast<int>((packed >> shift) & 0x03u) - 1
     );
   }
@@ -62,11 +62,11 @@ namespace task3 {
   class Move {
   public:
     long lastState_bottom_x1000, lastState_left_x1000, lastState_right_x1000, lastState_gripper_x1000; // 上一次状态转变那一刻电机角度*1000
-    short bottom_state = 0, left_state = 0, right_state = 0, gripper_state = 0; // -1 0 1，摇杆状态
+    int8_t bottom_state = 0, left_state = 0, right_state = 0, gripper_state = 0; // -1 0 1，摇杆状态
     unsigned long lastStateChangeTime; // 上一次状态转变那一刻的时间
     int speed; // angle per second
     // 设定基础状态
-    void set_init(int bottom, int left, int right, int gripper, unsigned long time, int speed) {
+    void set_init(uint8_t bottom, uint8_t left, uint8_t right, uint8_t gripper, unsigned long time, int speed) {
       lastState_bottom_x1000 = bottom * 1000L;
       lastState_left_x1000 = left * 1000L;
       lastState_right_x1000 = right * 1000L;
@@ -95,7 +95,7 @@ namespace task3 {
       // gripper_x1000 = constrain(gripper_x1000, 0L, 77000L);
     }
     // 施加一次摇杆状态变化
-    void changeState(short new_bottom_state, short new_left_state, short new_right_state, short new_gripper_state, unsigned long time) {
+    void changeState(int8_t new_bottom_state, int8_t new_left_state, int8_t new_right_state, int8_t new_gripper_state, unsigned long time) {
       computeThisTime(time, lastState_bottom_x1000, lastState_left_x1000, lastState_right_x1000, lastState_gripper_x1000);
       lastStateChangeTime = time;
       bottom_state = new_bottom_state;
@@ -108,13 +108,13 @@ namespace task3 {
   // 该状态机即使cpl后仍存在持续的内部状态，需要时需要在上层状态机手动传递信号使其彻底复位
   class LoopMovingSM {
   public:
-    enum class State { start, moveSeries } state = State::start;
+    enum class State : uint8_t { start, moveSeries } state = State::start;
     enum class Rt_t { FSM_RT_T_VALUES, restore = 4 };
 
     task2::MoveSeriesSM moveSeriesSM{};
 
     static constexpr size_t Action_size = 3;
-    int const (*actions[Action_size])[4] = {task2::A, task2::B, task2::C};
+    uint8_t const (*actions[Action_size])[4] = {task2::A, task2::B, task2::C};
     size_t const actionsSize[Action_size] = {task2::A_size, task2::B_size, task2::C_size};
     size_t actionIndex = 0;
 
@@ -129,7 +129,7 @@ namespace task3 {
       state = State::start;
       actionIndex = 0;
     }
-    void reset_fsm(int const action[][4], size_t const actionSize) {
+    void reset_fsm(uint8_t const action[][4], size_t const actionSize) {
       reset_fsm();
       // 按照本部分前面使用的语义，状态应该传到最深处的子状态机，由其处理，但是后面变动后引用了一个不属于task3的状态机task2::MoveSeriesSM
       // 改设计被打破。在此处，task2::MoveSeriesSM可以在任何状态被正常的复位，因此状态在LoopMoving被拦截处理，并且直接在LoopMoving的reset中传递信号复位task2::MoveSeriesSM
@@ -139,7 +139,7 @@ namespace task3 {
 
   class RecordSM {
   public:
-    enum class State { start, record } state = State::start;
+    enum class State : uint8_t { start, record } state = State::start;
     enum class Rt_t { FSM_RT_T_VALUES, restore = 4 };
 
     unsigned long startTime;
@@ -163,7 +163,7 @@ namespace task3 {
 
   class PlaySM {
   public:
-    enum class State { start, waitForInitMove, playAction } state = State::start;
+    enum class State : uint8_t { start, waitForInitMove, playAction } state = State::start;
     enum class Rt_t { FSM_RT_T_VALUES, restore = 4 };
 
     unsigned long initStartTime /*初始化设定舵机角度的时间*/, playStartTime /*开始播放的时间*/;
@@ -182,7 +182,7 @@ namespace task3 {
 
   class RestoreSM {
   public:
-    enum class State { start, restore, waitForReach } state = State::start;
+    enum class State : uint8_t { start, restore, waitForReach } state = State::start;
     enum class Rt_t { FSM_RT_T_VALUES };
 
     unsigned long lastMoveTime;
@@ -197,7 +197,7 @@ namespace task3 {
 
   class Task3SM {
   public:
-    enum class State { start, idle, loopMoving, record, play, restore } state = State::start;
+    enum class State : uint8_t { start, idle, loopMoving, record, play, restore } state = State::start;
     enum class Rt_t { FSM_RT_T_VALUES };
 
     // record需要大量内存，故声明为全局静态变量

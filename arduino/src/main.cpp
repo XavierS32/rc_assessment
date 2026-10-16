@@ -10,15 +10,15 @@ PullUpButton b3(PB12);
 PullUpButton b4(PB13);
 
 void setup() {
-  pinMode(LED_BUILTIN, OUTPUT);
-  pinMode(LED_D1, OUTPUT);
-  digitalWrite(LED_BUILTIN, HIGH);
+  pinMode(LED_BUILTIN, OUTPUT); // 默认低电平，此时绿灯亮（不设定引脚时，板子的默认状态是绿灯亮，红灯不亮）
+  pinMode(LED_D1, OUTPUT); // 默认低电平，此时红灯亮
   Serial1.begin(9600);
   Serial2.begin(9600);
   b1.setup();
   b2.setup();
   b3.setup();
   b4.setup();
+  digitalWrite(LED_BUILTIN, HIGH); // 完成初始化，关闭绿灯
 }
 
 void loop() {

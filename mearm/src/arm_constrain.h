@@ -1,5 +1,5 @@
 #pragma once
-constexpr int LEFT_MAX = 120;
-constexpr int LEFT_MIN = 0;
-constexpr int RIGHT_MAX = 135;
-constexpr int RIGHT_MIN = 40;
+constexpr uint8_t LEFT_MAX = 120;
+constexpr uint8_t LEFT_MIN = 0;
+constexpr uint8_t RIGHT_MAX = 135;
+constexpr uint8_t RIGHT_MIN = 40;

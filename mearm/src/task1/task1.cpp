@@ -10,7 +10,7 @@ namespace task1 {
   LineBufferedInput input{Serial, Serial};
   
   int speed = 1; // angle per second
-  int target_bottom, target_left, target_right;
+  uint8_t target_bottom, target_left, target_right;
   unsigned long lastMillis;
   int restDeltaAngle = 0;
 
@@ -32,13 +32,10 @@ namespace task1 {
   }
 
   // 根据目标角与当前角的大小决定移动方向，并确保移动停止在目标角
-  inline void applyAngle(Servo &servo, int target_angle, int deltaAngle) {
-    int now_angle = servo.read(); // 并非真正当前角度，只是上次write的角度
+  inline void applyAngle(Servo &servo, uint8_t target_angle, int deltaAngle) {
+    uint8_t now_angle = servo.read(); // 并非真正当前角度，只是上次write的角度
     now_angle += constrain(target_angle - now_angle, -deltaAngle, deltaAngle);
     servo.write(now_angle);
-    // char buf[1024];
-    // sprintf(buf, "move to %d, deltaAngle %d\n", now_angle, deltaAngle);
-    // Serial.println(buf);
   }
 
   // 要求并没有要求转动行为的实现方式，估选择一种最简单的方式，所有电机的移动速度一致，而非到达时间一致
@@ -55,7 +52,6 @@ namespace task1 {
       applyAngle(bottom, target_bottom, nowDeltaAngle);
       applyAngle(left, target_left, nowDeltaAngle);
       applyAngle(right, target_right, nowDeltaAngle);
-      // Serial.println("start move");
     }
   }
 
@@ -68,7 +64,7 @@ namespace task1 {
 
   bool loop(Servo &bottom, Servo &left, Servo &right, Gripper &gripper) {
     static enum class Mode : bool { Char = false, Line = true } mode = Mode::Char;
-    constexpr size_t BUF_SIZE = 32;
+    constexpr size_t BUF_SIZE = 16;
     static char buf[BUF_SIZE];
     if ( mode == Mode::Char && Serial.available() > 0) {
       char ch = Serial.peek();

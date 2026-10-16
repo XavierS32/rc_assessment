@@ -3,7 +3,7 @@
 class PiJoystick {
 public:
   uint8_t pin;
-  enum class State : short { down = -1, idle = 0, up = 1 };
+  enum class State : int8_t { down = -1, idle = 0, up = 1 };
   bool reverse;
   State stableState = State::idle;
 

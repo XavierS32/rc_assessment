@@ -3,7 +3,7 @@
 
 namespace task2 {
   // Actions
-  int const A[A_size][4] = {
+  uint8_t const A[A_size][4] PROGMEM = {
     {90, 70, 112, 0},
     {90, 70, 148, 0},
     {90, 70, 148, 1},
@@ -11,16 +11,18 @@ namespace task2 {
     {90, 70, 53, 0}
   };
 
-  int const B[B_size][4] = {
+  uint8_t const B[B_size][4] PROGMEM = {
     {52, 65, 129, 0},
-    {52, 34, 129, 0},
-    {52, 34, 129, 1},
+    //{52, 34, 129, 0},
+    //{52, 34, 129, 1},
+    {52, 35, 136, 0},
+    {52, 35, 136, 1},
     {100, 50, 100, 1},
     {100, 34, 129, 1},
     {100, 34, 129, 0}
   };
 
-  int const C[C_size][4] = {
+  uint8_t const C[C_size][4] PROGMEM = {
     {113, 61, 137, 0},
     {113, 22, 137, 0},
     {113, 22, 137, 1},
@@ -119,7 +121,7 @@ namespace task2 {
     return Rt_t::on_going;
   }
 
-  MoveSeriesSM::Rt_t MoveSeriesSM::run(int const action[][4], size_t const actionSize, bool reset) {
+  MoveSeriesSM::Rt_t MoveSeriesSM::run(uint8_t const action[][4], size_t const actionSize, bool reset) {
     if (reset) {
       reset_fsm();
       return Rt_t::on_cpl;
@@ -131,9 +133,9 @@ namespace task2 {
         [[gnu::fallthrough]];
       case State::initTarget:
         {
-          int const (&subAction)[4] = action[subIndex];
+          uint8_t const (&subAction)[4] = action[subIndex];
           moveTo.initTarget(bottom.read(), left.read(), right.read(), gripper.readSetInt(),
-                            subAction[0], subAction[1], subAction[2], subAction[3],
+                            pgm_read_byte(&subAction[0]), pgm_read_byte(&subAction[1]), pgm_read_byte(&subAction[2]), pgm_read_byte(&subAction[3]),
                             millis(), speed);
           state = State::moveTillEnd;
         }

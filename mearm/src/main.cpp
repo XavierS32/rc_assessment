@@ -7,6 +7,8 @@
 #include "task1/task1.h"
 #include "task2/task2.h"
 #include "task3/task3.h"
+#include "task5/task5.h"
+#define ENABLE_TOOLKIT
 
 Servo bottom;
 Servo left;
@@ -38,6 +40,10 @@ struct ProgramFuncs {
 
 void listProgram();
 
+#ifdef ENABLE_TOOLKIT
+#include "kinematics/kinematics.h"
+#endif
+
 PrefixRule<ProgramFuncs> rules[] = {
   {"list", ProgramFuncs {
     [](char const*const str) {},
@@ -63,7 +69,42 @@ PrefixRule<ProgramFuncs> rules[] = {
     [](char const*const str) {
       task3::setup(); },
     [](char const*const str) {
-      return task3::loop(); }}}
+      return task3::loop(); }}},
+  {"task5", ProgramFuncs {
+    [](char const*const str) {
+      task5::setup(str); },
+    [](char const*const str) {
+      return task5::loop(); }}}
+#ifdef ENABLE_TOOLKIT
+  ,{"fk", ProgramFuncs {
+    [](char const*const str) {
+      int a1, a2, a3;
+      sscanf(str, "fk %d %d %d", &a1, &a3, &a2);
+      float x, y, z;
+      fk_degree_fix(a1, a2, a3, x, y, z);
+      Serial.print(x, 5);
+      Serial.print(' ');
+      Serial.print(y, 5);
+      Serial.print(' ');
+      Serial.println(z, 5); },
+    [](char const*const str) {
+      return true; }}}
+  ,{"ik", ProgramFuncs {
+    [](char const*const str) {
+      int x, y, z;
+      sscanf(str, "ik %d %d %d", &x, &z, &y);
+      int a1, a2, a3;
+      if (ik_degree_fix(x, y, z, a1, a2, a3) ) {
+        Serial.print(a1);
+        Serial.print(' ');
+        Serial.print(a2);
+        Serial.print(' ');
+        Serial.println(a3);
+      }
+      else  Serial.println("unreachable"); },
+    [](char const*const str) {
+      return true; }}}
+#endif
 };
 
 void listProgram() {
@@ -101,7 +142,7 @@ void setup() {
 }
 
 void loop() {
-  constexpr size_t BUF_SIZE = 32;
+  constexpr size_t BUF_SIZE = 25;
   static enum Mode { shell, program } mode = Mode::shell;
   static char buf[BUF_SIZE];
   if ( mode == Mode::shell && input.getLine(buf, BUF_SIZE) != nullptr) {

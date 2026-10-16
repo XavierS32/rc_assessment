@@ -1,2 +1,2 @@
 #pragma once
-enum class ButtonState : short { none = 0, first, second, third, fourth };
+enum class ButtonState : int8_t { none = 0, first, second, third, fourth };

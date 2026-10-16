@@ -33,18 +33,30 @@ inline void fk_degree(float a1, float a2, float a3, float &x, float &y, float &z
   fk(a1, a2, a3, x, y, z);
 }
 
-inline bool ik_degree_fix(float x, float y, float z, float &a1, float &a2, float &a3) {
-  bool result = ik_degree(x, y, z, a1, a2, a3);
-  if (result) {
-    a1 = 200.0F / 187.0F * a1 - 1300.0F / 187.0F;
-    a2 = a2 - 10;
-    return true;
-  }
-  else  return false;
-}
+// XYZ -> 标定后的舵机控制值
+bool ik_degree_fix(
+    float x, float y, float z,
+    int &b, int &r, int &l
+);
 
-inline void fk_degree_fix(float a1, float a2, float a3, float &x, float &y, float &z) {
-  a1 = 187.0F / 200.0F * a1 + 6.5F;
-  a2 = a2 + 10;
-  fk_degree(a1, a2, a3, x, y, z);
-}
+// 标定后的舵机控制值 -> 预测 XYZ
+bool fk_degree_fix(
+    int b, int r, int l,
+    float &x, float &y, float &z
+);
+
+// inline bool ik_degree_fix(float x, float y, float z, float &a1, float &a2, float &a3) {
+//   bool result = ik_degree(x, y, z, a1, a2, a3);
+//   if (result) {
+//     a1 = 200.0F / 187.0F * a1 - 1300.0F / 187.0F;
+//     a2 = a2 - 10;
+//     return true;
+//   }
+//   else  return false;
+// }
+
+// inline void fk_degree_fix(float a1, float a2, float a3, float &x, float &y, float &z) {
+//   a1 = 187.0F / 200.0F * a1 + 6.5F;
+//   a2 = a2 + 10;
+//   fk_degree(a1, a2, a3, x, y, z);
+// }

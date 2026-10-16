@@ -10,28 +10,28 @@ extern Servo right;
 extern Gripper gripper;
 
 namespace task2 {
-  enum class Command : short { none = 0, A, B, C };
+  enum class Command : int8_t { none = 0, A, B, C };
 
   // Actions
   constexpr size_t A_size = 5;
-  extern int const A[A_size][4];
+  extern uint8_t const A[A_size][4];
 
   constexpr size_t B_size = 6;
-  extern int const B[B_size][4];
+  extern uint8_t const B[B_size][4];
 
   constexpr size_t C_size = 6;
-  extern int const C[C_size][4];
+  extern uint8_t const C[C_size][4];
 
   class MoveTo {
   public:
-    int target_bottom, target_left, target_right, target_gripper;
+    uint8_t target_bottom, target_left, target_right, target_gripper;
     long lastState_bottom_x1000, lastState_left_x1000, lastState_right_x1000, lastState_gripper_x1000; // 上一次状态转变那一刻电机角度*1000
-    short bottom_direction, left_direction, right_direction, gripper_direction; // -1 0 1，运动方向
+    int8_t bottom_direction, left_direction, right_direction, gripper_direction; // -1 0 1，运动方向
     unsigned long lastStateChangeTime; // 上一次状态转变那一刻的时间
     int speed; // angle per second
     // 设定基础状态
-    void initTarget(int bottom, int left, int right, int gripper,
-                  int target_bottom, int target_left, int target_right, int target_gripper,
+    void initTarget(uint8_t bottom, uint8_t left, uint8_t right, uint8_t gripper,
+                  uint8_t target_bottom, uint8_t target_left, uint8_t target_right, uint8_t target_gripper,
                   unsigned long time, int speed) {
       lastState_bottom_x1000 = bottom * 1000L;
       lastState_left_x1000 = left * 1000L;
@@ -60,7 +60,7 @@ namespace task2 {
       // bool gripper_is_ready = computeSingleThisTime(deltaTime, gripper_x1000, lastState_gripper_x1000, gripper_direction, target_gripper);
       // a dirty hack
       computeSingleThisTime(deltaTime, gripper_x1000, lastState_gripper_x1000, gripper_direction, target_gripper);
-      bool gripper_is_ready = gripper_direction == 0 ? true : lastStateChangeTime - time >= 500;
+      bool gripper_is_ready = gripper_direction == 0 ? true : time - lastStateChangeTime >= 1500;
       return bottom_is_ready && left_is_ready && right_is_ready && gripper_is_ready;
     }
     bool move(unsigned long time, long &bottom_x1000, long &left_x1000, long &right_x1000, long &gripper_x1000) {
@@ -72,7 +72,7 @@ namespace task2 {
       return is_ready;
     }
     // 计算单个电机的理想位置，返回true表示电机到位
-    bool computeSingleThisTime(unsigned long deltaTime, long &angle_x1000, long &lastState_angle_x1000, short angle_direction, int target_angle) {
+    bool computeSingleThisTime(unsigned long deltaTime, long &angle_x1000, long &lastState_angle_x1000, int8_t angle_direction, uint8_t target_angle) {
       if ( angle_direction == 0 ) {
         angle_x1000 = target_angle * 1000L; // 即使不需要移动，也需要传出相应的值，不能直接return
         return true;
@@ -107,7 +107,7 @@ namespace task2 {
     size_t subIndex = 0;
 
     // 注意，action不得为nullptr，actionSize必须>0，不可=0！
-    Rt_t run(int const action[][4], size_t const actionSize, bool reset);
+    Rt_t run(uint8_t const action[][4], size_t const actionSize, bool reset);
 
   private:
     void reset_fsm() {
@@ -121,7 +121,7 @@ namespace task2 {
     enum class State { start, idle, moving } state = State::start;
     enum class Rt_t { FSM_RT_T_VALUES };
 
-    int const (*action)[4] = nullptr;
+    uint8_t const (*action)[4] = nullptr;
     size_t actionSize;
 
     MoveSeriesSM moveSeriesSM{};

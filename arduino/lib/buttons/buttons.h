@@ -3,13 +3,13 @@
 
 // 用于按钮防抖
 struct ButtonState { 
-  enum State { released = HIGH, pressed = LOW };
+  enum State : uint8_t { released = HIGH, pressed = LOW };
   State stableState, lastState;
   unsigned long lastTime;
 
   void setup(ButtonState::State state);
   bool stableChange(ButtonState::State state, unsigned long time, unsigned long debouncingTime = 10 /* ms */);
-  bool stableChange(int state, unsigned long time) {
+  bool stableChange(uint8_t state, unsigned long time) {
     return stableChange((ButtonState::State)state, time);
   }
 };

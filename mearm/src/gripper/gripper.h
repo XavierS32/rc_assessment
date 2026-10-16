@@ -4,25 +4,25 @@
 class Gripper {
 public:
   Servo servo/*默认电机*/, servo2/*额外的电机*/;
-  short mode = 0; // 状态：0，李的爪子（单电机）；1，林的爪子（双电机）；2，我的爪子（单电机）
+  int8_t mode = 0; // 状态：0，李的爪子（单电机）；1，林的爪子（双电机）；2，我的爪子（单电机）
   // mn_xx -> mode{n}下，爪子打开与夹紧的角度
-  int m0_close = 120, m0_open = 50;
-  int m1_close = 50/*TODO*/, m1_open = 130;
-  int m2_close = 77, m2_open = 0;
+  uint8_t m0_close = 120, m0_open = 20;
+  uint8_t m1_close = 50/*TODO*/, m1_open = 130;
+  uint8_t m2_close = 77, m2_open = 0;
 
-  void attach(short mode, int servoPin) {
+  void attach(int8_t mode, uint8_t servoPin) {
     servo.attach(servoPin);
     servo2.detach();
     this->mode = mode;
   }
 
-  void attach(short mode, int servoPin, int servo2Pin) {
+  void attach(int8_t mode, uint8_t servoPin, uint8_t servo2Pin) {
     servo.attach(servoPin);
     servo2.attach(servo2Pin);
     this->mode = mode;
   }
 
-  void write(int value) {
+  void write(uint8_t value) {
     value = constrain(value, 0, 180);
     servo.write(value);
     if (mode == 1) {
@@ -44,11 +44,11 @@ public:
   }
 
   // 0（或所有非1的数）打开，1夹紧
-  void setInt(int close) {
+  void setInt(uint8_t close) {
     set(close == 1);
   }
 
-  int read() {
+  uint8_t read() {
     return servo.read();
   }
 
@@ -67,7 +67,7 @@ public:
   }
 
   // 0打开，1夹紧
-  int readSetInt() {
+  uint8_t readSetInt() {
     return readSet() ? 1 : 0;
   }
 };

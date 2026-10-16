@@ -9,7 +9,7 @@ namespace task3 {
   Record record;
 
   // 若g为-1，不改变夹爪状态
-  void setServo(int b, int l, int r, int g, unsigned long &lastTime) {
+  void setServo(uint8_t b, uint8_t l, uint8_t r, int g, unsigned long &lastTime) {
     bottom.write(b);
     left.write(l);
     right.write(r);
@@ -26,16 +26,16 @@ namespace task3 {
     // Serial.println(g, DEC);
     lastTime = millis();
   }
-  void setServo(int const (&angles)[4], unsigned long &lastTime) {
+  void setServo(uint8_t const (&angles)[4], unsigned long &lastTime) {
     setServo(angles[0], angles[1], angles[2], angles[3], lastTime);
   }
 
   void ignoreButtonMsg(ButtonState const &clickedButton, char const*const name) {
-    Serial.print("Busy running \'");
+    Serial.print(F("Busy running \'"));
     Serial.print(name);
-    Serial.print("\', button \'");
+    Serial.print(F("\', button \'"));
     Serial.print(static_cast<int>(clickedButton), DEC);
-    Serial.println("\' ignored.");
+    Serial.println(F("\' ignored."));
   }
 
   LoopMovingSM::Rt_t LoopMovingSM::run(ButtonState &clickedButton, bool reset) {
@@ -101,7 +101,7 @@ namespace task3 {
       case State::start:
         // 亮信号灯，打印信息
         digitalWrite(3, HIGH);
-        Serial.println("record start");
+        Serial.println(F("record start"));
 
         // 将四个摇杆维度初始状态均设为置中
         for (auto &i : joystickStates) {
@@ -138,7 +138,7 @@ namespace task3 {
           // 处理再次按下button2结束录制
           if (clickedButton == ButtonState::second) {
             // 完善record终止部分
-            Serial.println("record stop");
+            Serial.println(F("record stop"));
             record.is_complete_record = true;
             record.stopTime = relativeTime;
             reset_fsm();
@@ -156,7 +156,7 @@ namespace task3 {
             // 更新录制数组
             bool full = !addRecord(ActionRecord{ relativeTime, packStates(nowJoystickStates[0], nowJoystickStates[1], nowJoystickStates[2], nowJoystickStates[3]) }, record, actionRecordsSize);
             if (full) { // 此处的行为是经过思考的，当数组满后，其实还可以录制一截沿当前状态运动的过程，直到下一次状态改变无法再被记录，因此此时停止更为合适
-              Serial.println("memory full. record stop");
+              Serial.println(F("memory full. record stop"));
               // 完善record终止部分
               record.is_complete_record = true;
               record.stopTime = relativeTime;
@@ -164,9 +164,9 @@ namespace task3 {
               return Rt_t::on_cpl;
             }
             else {
-              Serial.print("memory usage: ");
+              Serial.print(F("memory usage: "));
               Serial.print(actionRecordsSize - record.actionRecordsCount, DEC);
-              Serial.println(" actions left");
+              Serial.println(F(" actions left"));
             }
             // 以录制数组设定理想运动状态
             ActionRecord &nowAR = record.actionRecords[record.actionRecordsCount - 1];
@@ -205,14 +205,14 @@ namespace task3 {
       case State::start:
         // 首先，检测有无录制。注意，也有可能有录制count为0（什么都没动），这种情况下面也能正常处理
         if (!record.is_complete_record) {
-          Serial.println("no complete record exists");
+          Serial.println(F("no complete record exists"));
           reset_fsm();
           return Rt_t::on_cpl;
         }
         // 重设播放索引
         actionRecordsIndex = 0;
         // 初始化到开始录制的角度
-        Serial.println("initlizing...");
+        Serial.println(F("initlizing..."));
         bottom.write(record.start_bottom);
         left.write(record.start_left);
         right.write(record.start_right);
@@ -227,7 +227,7 @@ namespace task3 {
         else {
           move.set_init(record.start_bottom, record.start_left, record.start_right, record.start_gripper, 0, record.speed);
           playStartTime = millis();
-          Serial.println("play start");
+          Serial.println(F("play start"));
           state = State::playAction;
         }
         [[gnu::fallthrough]];
@@ -265,7 +265,7 @@ namespace task3 {
 
           // 如果达到或超过结束时间，结束播放
           if (relativeTime == record.stopTime) {
-            Serial.println("play stop");
+            Serial.println(F("play stop"));
             reset_fsm();
             return Rt_t::on_cpl;
           }
@@ -398,7 +398,7 @@ namespace task3 {
 
   void setup() {
     pinMode(3, OUTPUT);
-    Serial.println("task3 start");
+    Serial.println(F("task3 start"));
   }
 
   bool loop() {
